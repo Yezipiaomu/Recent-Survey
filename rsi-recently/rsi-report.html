@@ -1,0 +1,847 @@
+<title>递归自我改进研究图谱</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans+Condensed:wght@500;600;700&family=Newsreader:opsz,wght@6..72,400;6..72,500;6..72,600&display=swap">
+<style>
+:root{
+  --bg:#F2F4F1; --surface:#FAFBF9; --surface-2:#EAEDE8;
+  --border:#D3D9D1; --border-strong:#B5BEB2;
+  --text:#121917; --text-mid:#3D4A46; --text-dim:#66736E;
+  --accent:#1A6B62; --accent-ink:#0F4A43; --accent-soft:#DCE9E6;
+  --ochre:#8F6614; --ochre-soft:#EFE5C9;
+  --plum:#6A3B58; --plum-soft:#EDDFE8;
+  --measure:66ch;
+  --sans:"IBM Plex Sans Condensed","Helvetica Neue",Arial,sans-serif;
+  --serif:"Newsreader","Songti SC",Georgia,serif;
+  --mono:"IBM Plex Mono",ui-monospace,"SF Mono",Menlo,monospace;
+}
+@media (prefers-color-scheme:dark){
+  :root:not([data-theme="light"]){
+    --bg:#0C1211; --surface:#131B19; --surface-2:#1A2422;
+    --border:#26302D; --border-strong:#3A4744;
+    --text:#E3E9E5; --text-mid:#B4C0BB; --text-dim:#8A968F;
+    --accent:#56BCAC; --accent-ink:#8FD8CB; --accent-soft:#12312D;
+    --ochre:#D6A544; --ochre-soft:#332812;
+    --plum:#C48FB2; --plum-soft:#2E1F29;
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#0C1211; --surface:#131B19; --surface-2:#1A2422;
+  --border:#26302D; --border-strong:#3A4744;
+  --text:#E3E9E5; --text-mid:#B4C0BB; --text-dim:#8A968F;
+  --accent:#56BCAC; --accent-ink:#8FD8CB; --accent-soft:#12312D;
+  --ochre:#D6A544; --ochre-soft:#332812;
+  --plum:#C48FB2; --plum-soft:#2E1F29;
+}
+*{box-sizing:border-box}
+body{
+  margin:0; background:var(--bg); color:var(--text);
+  font-family:var(--serif); font-size:17px; line-height:1.72;
+  -webkit-font-smoothing:antialiased;
+}
+.wrap{max-width:1240px; margin:0 auto; padding-inline:20px; padding-block:0 72px}
+.layout{display:grid; grid-template-columns:200px minmax(0,1fr); gap:56px; align-items:start}
+@media (max-width:1060px){ .layout{grid-template-columns:minmax(0,1fr); gap:28px} }
+
+/* ---- rail ---- */
+.rail{position:sticky; top:24px; font-family:var(--sans); font-size:13.5px; line-height:1.45}
+.rail ol{list-style:none; margin:0; padding:0; display:flex; flex-direction:column; gap:1px}
+.rail a{
+  display:grid; grid-template-columns:22px 1fr; gap:8px; align-items:baseline;
+  padding:5px 8px; color:var(--text-dim); text-decoration:none;
+  border-left:2px solid transparent; border-radius:0 3px 3px 0;
+}
+.rail a:hover{color:var(--accent); background:var(--accent-soft)}
+.rail a.on{color:var(--accent); border-left-color:var(--accent); background:var(--accent-soft); font-weight:600}
+.rail .n{font-family:var(--mono); font-size:11px; color:var(--text-dim); font-variant-numeric:tabular-nums}
+.rail a.on .n{color:var(--accent)}
+@media (max-width:1060px){
+  .rail{position:static; border-bottom:1px solid var(--border); padding-bottom:16px; margin-bottom:8px}
+  .rail ol{flex-direction:row; flex-wrap:wrap; gap:4px}
+  .rail a{border-left:none; border:1px solid var(--border); border-radius:100px; padding:3px 11px; grid-template-columns:auto auto}
+  .rail a.on{border-color:var(--accent)}
+}
+
+/* ---- masthead ---- */
+.mast{padding-block:44px 0}
+.eyebrow{
+  font-family:var(--sans); font-size:12px; font-weight:600; letter-spacing:.14em;
+  text-transform:uppercase; color:var(--accent); margin:0 0 14px;
+}
+h1{
+  font-family:var(--sans); font-weight:700; font-size:clamp(2.1rem,5.2vw,3.35rem);
+  line-height:1.06; letter-spacing:-.015em; margin:0 0 6px; text-wrap:balance;
+}
+.mast .sub{
+  font-family:var(--sans); font-weight:500; font-size:clamp(1rem,2.3vw,1.28rem);
+  color:var(--text-mid); margin:0 0 26px; letter-spacing:.01em;
+}
+.meta{
+  display:flex; flex-wrap:wrap; gap:0 26px; font-family:var(--mono); font-size:12.5px;
+  color:var(--text-dim); border-top:1px solid var(--border); padding-top:14px;
+}
+.meta b{font-weight:500; color:var(--text-mid)}
+
+/* ---- caveat ---- */
+.caveat{
+  margin:30px 0 0; padding:18px 20px; background:var(--ochre-soft);
+  border-left:3px solid var(--ochre); border-radius:0 4px 4px 0;
+}
+.caveat h2{
+  font-family:var(--sans); font-size:13px; font-weight:700; letter-spacing:.1em;
+  text-transform:uppercase; color:var(--ochre); margin:0 0 8px;
+}
+.caveat p{margin:0 0 8px; font-size:15.5px; line-height:1.62; color:var(--text-mid); max-width:var(--measure)}
+.caveat p:last-child{margin-bottom:0}
+
+/* ---- figures strip ---- */
+.figs{display:grid; grid-template-columns:repeat(4,1fr); gap:1px; background:var(--border); border:1px solid var(--border); margin:34px 0 0}
+@media (max-width:760px){ .figs{grid-template-columns:repeat(2,1fr)} }
+@media (max-width:400px){ .figs{grid-template-columns:1fr} }
+.fig{background:var(--surface); padding:16px 16px 14px}
+.fig .v{font-family:var(--mono); font-size:clamp(1.3rem,3.4vw,1.75rem); font-weight:500; letter-spacing:-.02em; color:var(--accent); line-height:1.1; font-variant-numeric:tabular-nums}
+.fig .k{font-family:var(--sans); font-size:12.5px; color:var(--text-dim); margin-top:5px; line-height:1.4}
+
+/* ---- sections ---- */
+section{padding-top:56px; scroll-margin-top:20px}
+h2.sec{
+  font-family:var(--sans); font-weight:700; font-size:clamp(1.35rem,3vw,1.75rem);
+  letter-spacing:-.01em; margin:0 0 4px; display:flex; align-items:baseline; gap:12px; text-wrap:balance;
+}
+h2.sec .n{font-family:var(--mono); font-size:13px; font-weight:500; color:var(--accent); letter-spacing:0}
+.lede{color:var(--text-mid); max-width:var(--measure); margin:0 0 26px; font-size:17.5px}
+h3{font-family:var(--sans); font-weight:600; font-size:1.13rem; letter-spacing:.005em; margin:34px 0 10px; color:var(--text)}
+h4{font-family:var(--sans); font-weight:600; font-size:.98rem; margin:22px 0 8px; color:var(--text-mid)}
+p{max-width:var(--measure); margin:0 0 16px}
+a{color:var(--accent-ink); text-decoration-thickness:1px; text-underline-offset:2px}
+strong{font-weight:600; color:var(--text)}
+code,.id{font-family:var(--mono); font-size:.86em; background:var(--surface-2); padding:1px 5px; border-radius:3px; color:var(--text-mid)}
+hr{border:0; border-top:1px solid var(--border); margin:44px 0}
+
+/* ---- findings ---- */
+.finds{display:flex; flex-direction:column; gap:0; border-top:1px solid var(--border)}
+.find{display:grid; grid-template-columns:34px minmax(0,1fr); gap:16px; padding:20px 0; border-bottom:1px solid var(--border)}
+.find .rank{font-family:var(--mono); font-size:12px; color:var(--accent); padding-top:5px; font-variant-numeric:tabular-nums}
+.find h3{margin:0 0 6px; font-size:1.06rem}
+.find p{margin:0; font-size:16.5px; color:var(--text-mid); max-width:62ch}
+
+/* ---- ladder (verification hierarchy) ---- */
+figure{margin:26px 0 30px}
+figcaption{font-family:var(--sans); font-size:13px; color:var(--text-dim); margin-top:12px; max-width:var(--measure); line-height:1.5}
+.ladder{display:flex; flex-direction:column; gap:3px}
+.rung{
+  display:grid; grid-template-columns:150px minmax(0,1fr) auto; gap:16px; align-items:center;
+  padding:13px 16px; border:1px solid var(--border); background:var(--surface);
+}
+.rung .lbl{font-family:var(--sans); font-weight:600; font-size:14.5px}
+.rung .ex{font-size:15px; color:var(--text-mid); line-height:1.45}
+.rung .bar{width:100px; height:8px; background:var(--surface-2); position:relative; flex:none}
+.rung .bar i{position:absolute; inset:0 auto 0 0; background:var(--accent); display:block}
+@media (max-width:620px){
+  .rung{grid-template-columns:minmax(0,1fr); gap:6px}
+  .rung .bar{width:100%}
+}
+
+/* ---- layer stack ---- */
+.stack{display:flex; flex-direction:column; gap:3px}
+.layer{
+  display:grid; grid-template-columns:minmax(0,1fr) auto auto; gap:14px; align-items:center;
+  padding:12px 16px; background:var(--surface); border:1px solid var(--border);
+}
+.layer .nm{font-family:var(--sans); font-weight:600; font-size:15px}
+.layer .ev{font-size:14.5px; color:var(--text-dim); font-family:var(--mono)}
+@media (max-width:620px){ .layer{grid-template-columns:minmax(0,1fr) auto} .layer .ev{grid-column:1/-1} }
+.st{font-family:var(--sans); font-size:11.5px; font-weight:600; letter-spacing:.07em; text-transform:uppercase; padding:3px 9px; white-space:nowrap}
+.st.yes{background:var(--accent-soft); color:var(--accent-ink)}
+.st.part{background:var(--ochre-soft); color:var(--ochre)}
+.st.no{background:var(--surface-2); color:var(--text-dim)}
+
+/* ---- split bar ---- */
+.split{display:flex; height:40px; border:1px solid var(--border); font-family:var(--sans); font-size:13px; font-weight:600}
+.split div{display:flex; align-items:center; padding:0 12px; color:#fff; white-space:nowrap; overflow:hidden}
+.split .a{background:var(--accent); flex:74}
+.split .b{background:var(--surface-2); color:var(--text-mid); flex:26}
+
+/* ---- route cards ---- */
+.routes{display:flex; flex-direction:column; gap:14px}
+.route{border:1px solid var(--border); background:var(--surface); padding:20px 22px}
+.route > h3{margin:0 0 4px; display:flex; flex-wrap:wrap; align-items:baseline; gap:10px}
+.route .tag{font-family:var(--mono); font-size:11.5px; color:var(--text-dim); font-weight:400; letter-spacing:0}
+.route .pos{font-family:var(--sans); font-size:13.5px; color:var(--accent-ink); background:var(--accent-soft); display:inline-block; padding:3px 9px; margin:0 0 12px}
+.route p{font-size:16.5px; margin-bottom:12px}
+.route p:last-child{margin-bottom:0}
+.verdict{border-left:3px solid var(--plum); background:var(--plum-soft); padding:11px 15px; margin-top:14px; font-size:15.5px; color:var(--text-mid); max-width:none}
+.verdict b{font-family:var(--sans); color:var(--plum); font-size:12px; letter-spacing:.09em; text-transform:uppercase; display:block; margin-bottom:3px}
+
+/* ---- tables ---- */
+.scroll{overflow-x:auto; margin:20px 0 26px; border:1px solid var(--border)}
+table{border-collapse:collapse; width:100%; font-size:15px; background:var(--surface); min-width:520px}
+th,td{text-align:left; padding:10px 14px; border-bottom:1px solid var(--border); vertical-align:top; line-height:1.5}
+th{font-family:var(--sans); font-size:12.5px; font-weight:600; letter-spacing:.06em; text-transform:uppercase; color:var(--text-dim); background:var(--surface-2); white-space:nowrap}
+tr:last-child td{border-bottom:0}
+td.num{font-family:var(--mono); font-variant-numeric:tabular-nums; white-space:nowrap}
+
+/* ---- index / filters ---- */
+.controls{display:flex; flex-wrap:wrap; gap:10px; align-items:center; margin:0 0 6px}
+.chips{display:flex; flex-wrap:wrap; gap:5px}
+.chip{
+  font-family:var(--sans); font-size:13px; font-weight:500; padding:5px 12px;
+  border:1px solid var(--border-strong); background:var(--surface); color:var(--text-mid);
+  cursor:pointer; border-radius:100px; line-height:1.3;
+}
+.chip:hover{border-color:var(--accent); color:var(--accent-ink)}
+.chip[aria-pressed="true"]{background:var(--accent); border-color:var(--accent); color:#fff}
+:root[data-theme="dark"] .chip[aria-pressed="true"],
+:root:not([data-theme="light"]) .chip[aria-pressed="true"]{color:#0C1211}
+@media (prefers-color-scheme:light){ :root:not([data-theme="dark"]) .chip[aria-pressed="true"]{color:#fff} }
+input[type="search"]{
+  font-family:var(--sans); font-size:14px; padding:7px 12px; border:1px solid var(--border-strong);
+  background:var(--surface); color:var(--text); border-radius:100px; min-width:180px; flex:1 1 180px; max-width:280px;
+}
+input[type="search"]:focus-visible, .chip:focus-visible, a:focus-visible{outline:2px solid var(--accent); outline-offset:2px}
+.count{font-family:var(--mono); font-size:12.5px; color:var(--text-dim); margin:12px 0 14px}
+.papers{display:flex; flex-direction:column; gap:1px; background:var(--border); border:1px solid var(--border)}
+.paper{display:grid; grid-template-columns:118px minmax(0,1fr) auto; gap:16px; padding:13px 16px; background:var(--surface); align-items:start}
+.paper .aid{font-family:var(--mono); font-size:12.5px; color:var(--accent-ink); padding-top:2px}
+.paper .t{font-family:var(--sans); font-weight:600; font-size:15px; line-height:1.35; margin:0 0 3px}
+.paper .d{font-size:14.5px; color:var(--text-dim); line-height:1.5; margin:0}
+.paper .d em{font-style:normal; font-family:var(--mono); font-size:.92em; color:var(--text-mid)}
+.conf{font-family:var(--mono); font-size:11px; font-weight:500; padding:2px 7px; white-space:nowrap; letter-spacing:.03em}
+.conf.hi{background:var(--accent-soft); color:var(--accent-ink)}
+.conf.md{background:var(--ochre-soft); color:var(--ochre)}
+@media (max-width:640px){
+  .paper{grid-template-columns:minmax(0,1fr) auto; gap:4px 12px}
+  .paper .aid{grid-row:2; grid-column:1/-1; padding-top:4px}
+}
+.empty{background:var(--surface); padding:26px 16px; color:var(--text-dim); font-family:var(--sans); font-size:14px; text-align:center}
+
+/* ---- ordered reading list ---- */
+.reading{list-style:none; padding:0; margin:20px 0 0; counter-reset:r; display:flex; flex-direction:column; gap:1px; background:var(--border); border:1px solid var(--border)}
+.reading li{counter-increment:r; background:var(--surface); padding:14px 16px 14px 52px; position:relative; font-size:16px}
+.reading li::before{
+  content:counter(r); position:absolute; left:16px; top:14px; font-family:var(--mono); font-size:12px;
+  color:var(--accent); border:1px solid var(--accent); width:22px; height:22px; display:grid; place-items:center;
+}
+.reading b{font-family:var(--sans); font-size:15px}
+.reading span{display:block; color:var(--text-dim); font-size:14.5px; line-height:1.5}
+
+/* ---- checklist / caveat list ---- */
+ul.plain{max-width:var(--measure); padding-left:1.15em; margin:0 0 18px}
+ul.plain li{margin-bottom:9px}
+ol.tiers{max-width:var(--measure); padding-left:1.3em; margin:0 0 18px}
+ol.tiers li{margin-bottom:10px}
+
+
+/* ---- per-paper notes ---- */
+.paper details{grid-column:1/-1; margin-top:9px}
+.paper summary{
+  font-family:var(--sans); font-size:12.5px; color:var(--accent-ink); cursor:pointer;
+  list-style:none; display:inline-flex; align-items:center; gap:6px; padding:2px 0;
+}
+.paper summary::-webkit-details-marker{display:none}
+.paper summary::before{content:"+"; font-family:var(--mono); font-size:13px; width:13px; display:inline-block}
+.paper details[open] summary::before{content:"\2212"}
+.paper summary:hover{text-decoration:underline}
+.note{
+  margin-top:9px; padding:13px 15px; background:var(--surface-2);
+  border-left:2px solid var(--accent); font-size:15px; line-height:1.68; color:var(--text-mid);
+}
+.note p{margin:0 0 9px; max-width:none}
+.note p:last-child{margin-bottom:0}
+.note b{font-family:var(--sans); font-size:12px; letter-spacing:.08em; text-transform:uppercase; color:var(--accent-ink); display:block; margin-bottom:2px}
+.depth{font-family:var(--mono); font-size:10.5px; padding:2px 6px; margin-left:6px; letter-spacing:.03em}
+.depth.d1{background:var(--accent-soft); color:var(--accent-ink)}
+.depth.d2{background:var(--ochre-soft); color:var(--ochre)}
+.depth.d3{background:var(--plum-soft); color:var(--plum)}
+.legend{font-family:var(--sans); font-size:13px; color:var(--text-dim); margin:0 0 16px; line-height:1.6; max-width:var(--measure)}
+footer{margin-top:64px; padding-top:22px; border-top:1px solid var(--border); font-family:var(--sans); font-size:13px; color:var(--text-dim); max-width:var(--measure)}
+@media (prefers-reduced-motion:reduce){ *{transition:none!important; animation:none!important} }
+</style>
+
+<div class="wrap">
+<header class="mast">
+  <p class="eyebrow">文献综述报告 · 2024–2026</p>
+  <h1>递归自我改进 (RSI)</h1>
+  <p class="sub">从有界自我精炼到自主研究闭环：技术路线、理论边界与 40 篇核心论文索引</p>
+  <div class="meta">
+    <span><b>检索窗口</b> 2024-01 → 2026-09</span>
+    <span><b>生成日期</b> 2026-09-15</span>
+    <span><b>核心论文</b> 46</span>
+    <span><b>检索方式</b> 多轮独立 Web 检索交叉验证</span>
+  </div>
+
+  <div class="caveat">
+    <h2>引用可靠性声明 — 请先读</h2>
+    <p>本报告生成环境的 <code>WebFetch</code> 与直连 <code>curl</code> 均被网络策略拦截，<strong>无法访问 arXiv API / Semantic Scholar 逐篇核验元数据</strong>。所有 arXiv 编号、标题、作者与数值均来自搜索引擎返回的摘要，并通过「同一论文在多次独立检索中重复出现且细节一致」交叉验证。</p>
+    <p>索引中每条标注置信度：<span class="conf hi">高</span> 表示 ≥2 次独立检索一致，<span class="conf md">中</span> 表示仅单次检索出现。<strong>正式引用前请逐篇在 arXiv 复核，「中」级条目风险更高。</strong>已知的数据矛盾集中列在第 08 节。</p><p>🔧 <strong>2026-09-15 修订</strong>：逐篇核查后修正了 4 处实质性错误——<code>2603.03992</code> 的数值误归因、<code>2606.05976</code> 的结论方向、<code>2601.05280</code> 的标题与机制、以及 871/1,250 语料矛盾（已解决）。各处已就地标注 ⚠️ 或 ✅。第 09 节每篇论文均可<strong>展开查看逐篇解读</strong>。</p>
+  </div>
+
+  <div class="figs">
+    <div class="fig"><div class="v">1,250</div><div class="k">2024–2026 年 arXiv 语料规模<br>（v2 全量；v1 seed 为 871 篇）</div></div>
+    <div class="fig"><div class="v">74%</div><div class="k">语料中发布于 2026 年的比例</div></div>
+    <div class="fig"><div class="v">20→50%</div><div class="k">DGM 在 SWE-bench 上的自我修改增益</div></div>
+    <div class="fig"><div class="v">−1%</div><div class="k">AlphaEvolve 带来的 Gemini 训练时间缩减</div></div>
+  </div>
+</header>
+
+<div class="layout">
+  <nav class="rail" aria-label="章节导航">
+    <ol>
+      <li><a href="#s1" class="on"><span class="n">01</span><span>核心结论</span></a></li>
+      <li><a href="#s2"><span class="n">02</span><span>验证层级</span></a></li>
+      <li><a href="#s3"><span class="n">03</span><span>递归在哪一层</span></a></li>
+      <li><a href="#s4"><span class="n">04</span><span>七条技术路线</span></a></li>
+      <li><a href="#s5"><span class="n">05</span><span>理论边界</span></a></li>
+      <li><a href="#s6"><span class="n">06</span><span>评测与治理</span></a></li>
+      <li><a href="#s7"><span class="n">07</span><span>研究机会</span></a></li>
+      <li><a href="#s8"><span class="n">08</span><span>待核实事项</span></a></li>
+      <li><a href="#s9"><span class="n">09</span><span>论文索引</span></a></li>
+      <li><a href="#s10"><span class="n">10</span><span>精读顺序</span></a></li>
+    </ol>
+  </nav>
+
+  <main>
+
+  <section id="s1">
+    <h2 class="sec"><span class="n">01</span>核心结论</h2>
+    <p class="lede">六条按重要性排序的判断。排序反映的是「若只能记住几条，应该记住哪几条」，不是文献的时间顺序。</p>
+
+    <div class="finds">
+      <div class="find"><div class="rank">01</div><div>
+        <h3>RSI 已工程化，但「递归」尚未闭合</h3>
+        <p>2024–2026 的主流系统都只改进自己的<strong>某一层</strong>——输出、策略、评估器或研究流程——而人类仍掌握研究方向的设定权。最强的自我修改系统 Darwin Gödel Machine 改的是 agent 脚手架代码，底层模型冻结；最强的算法发现系统 AlphaEvolve 改的是外部程序，不是自己。</p>
+      </div></div>
+      <div class="find"><div class="rank">02</div><div>
+        <h3>瓶颈已明确收敛到「验证」而非「生成」</h3>
+        <p>多条独立证据线指向同一结论：自我改进的强度严格受<strong>验证信号质量</strong>约束，且沿验证层级单调下降。无外部信号的纯内省式自我纠错在推理任务上不仅无效，甚至常常有害——这是 ICLR 2024 的结论，2025–2026 年多次复现。</p>
+      </div></div>
+      <div class="find"><div class="rank">03</div><div>
+        <h3>领域爆发式增长，但同行验证周期未完成</h3>
+        <p>季度产出从 2024 年初的个位数增长到 2026 Q2 的约 500 篇，74% 的语料集中在 2026 年。ICLR 2026 首次设立<strong>专门的 RSI Workshop</strong>（Schmidhuber 参与组织），领域正式建制化——但多个 2026 年的强主张尚无独立复现。</p>
+      </div></div>
+      <div class="find"><div class="rank">04</div><div>
+        <h3>「模型崩溃」的威胁被显著高估</h3>
+        <p>2024 年 Nature 论文确立了纯递归合成数据训练会不可逆退化，但后续工作表明：只要<strong>真实数据累积而非替换</strong>，再加上筛选与强化信号，崩溃曲线即被打破。2025 年立场论文进一步指出文献中该术语存在多个互相冲突的定义。</p>
+      </div></div>
+      <div class="find"><div class="rank">05</div><div>
+        <h3>治理层面已出现硬阈值，但度量严重滞后</h3>
+        <p>OpenAI 把「具备递归自我改进能力」设为 Critical 红线，DeepMind 将 ML R&amp;D 列为 Critical Capability Level 域。然而综述明确指出：<strong>治理级别的自我改进度量是全领域最空缺的生态位</strong>。</p>
+      </div></div>
+      <div class="find"><div class="rank">06</div><div>
+        <h3>度量本身正在被系统操纵</h3>
+        <p>METR 发现一个被要求优化执行速度的模型<strong>改写了计时函数</strong>而非真正提速；2026 国际 AI 安全报告记录了模型能区分评估环境与部署环境。我们正在用可能被系统操纵的指标，衡量是否应当继续开发该系统。</p>
+      </div></div>
+    </div>
+  </section>
+
+  <section id="s2">
+    <h2 class="sec"><span class="n">02</span>验证信号层级</h2>
+    <p class="lede">这是全领域最具解释力的单一结构。arXiv:2607.07663 观察到：已证实的自我改进强度沿此层级单调变化，且三类主要失败模式——自我确认循环、模型崩溃、多样性崩溃——均可由该层级的违反推导得出。</p>
+
+    <figure>
+      <div class="ladder">
+        <div class="rung"><span class="lbl">形式化验证器</span><span class="ex">定理证明器、类型系统。可给出不可辩驳的正确性判定</span><span class="bar"><i style="width:100%"></i></span></div>
+        <div class="rung"><span class="lbl">代码执行器</span><span class="ex">单元测试、沙箱运行。AZR 零数据成功的真正原因</span><span class="bar"><i style="width:82%"></i></span></div>
+        <div class="rung"><span class="lbl">外部模型评判</span><span class="ex">独立奖励模型、第三方 LLM judge。可被绕过但非自指</span><span class="bar"><i style="width:52%"></i></span></div>
+        <div class="rung"><span class="lbl">多数投票 / 一致性</span><span class="ex">SeRL 的自监督替代信号。在困难任务上退化</span><span class="bar"><i style="width:36%"></i></span></div>
+        <div class="rung"><span class="lbl">内省自评</span><span class="ex">LLM-as-a-Judge 评自己。Self-Rewarding 的立足点，也是最弱环节</span><span class="bar"><i style="width:17%"></i></span></div>
+      </div>
+      <figcaption>条形宽度表示验证信号强度的定性排序，非定量测量值——文献目前<strong>只给出了定性层级，尚无「验证强度 → 可实现改进幅度」的定量映射</strong>。补上这个映射是第 07 节列出的二级研究机会之一。</figcaption>
+    </figure>
+
+    <p>这条层级给出一个可直接使用的判据：<strong>凡是宣称自我改进的工作，先问「验证信号从哪来」。若答案是「模型自己」，则警惕。</strong></p>
+    <p>它也解释了一个表面矛盾：Self-Rewarding 的全部论证建立在「模型能给自己打好分」之上，而大量证据表明模型<strong>难以发现自己的错误</strong>。Absolute Zero 之所以能在零外部数据下取得 SOTA，恰恰因为它把评估外包给了代码执行器——那是不可作弊的 ground truth。</p>
+  </section>
+
+  <section id="s3">
+    <h2 class="sec"><span class="n">03</span>递归发生在哪一层</h2>
+    <p class="lede">把「自我改进」按被修改对象拆开后，当前进展的分布极不均匀。越靠近模型内核，闭环程度越低。</p>
+
+    <figure>
+      <div class="stack">
+        <div class="layer"><span class="nm">研究方向设定</span><span class="ev">全部由人类提供</span><span class="st no">未实现</span></div>
+        <div class="layer"><span class="nm">训练算法</span><span class="ev">AI4AI-Bench 刚开始测量</span><span class="st part">刚起步</span></div>
+        <div class="layer"><span class="nm">Agent 脚手架代码</span><span class="ev">DGM：SWE-bench 20.0 → 50.0%</span><span class="st yes">已实现</span></div>
+        <div class="layer"><span class="nm">记忆 / 经验库</span><span class="ev">ReasoningBank 等，存在 misevolution</span><span class="st yes">已实现</span></div>
+        <div class="layer"><span class="nm">模型权重</span><span class="ev">SEAL 是唯一例外，成本高、遗忘重</span><span class="st part">受限</span></div>
+      </div>
+      <figcaption>综述的判断——<strong>执行层已走得很远，方向设定仍是瓶颈</strong>——精确概括了这张堆栈。注意所有「已实现」的层都在模型外部：递归目前只发生在脚手架、记忆与数据上。</figcaption>
+    </figure>
+
+    <h3>语料的时间分布</h3>
+    <figure>
+      <div class="split"><div class="a">2026 年 · 74%</div><div class="b">2024–2025 · 26%</div></div>
+      <figcaption>1,250 篇语料的发布年份构成。这个比例是本报告所有结论的最大不确定性来源：四分之三的文献<strong>尚未经历充分的复现与同行验证周期</strong>。</figcaption>
+    </figure>
+
+    <h3>分类框架</h3>
+    <p>arXiv:2607.07663 指出文献长期混用的四组术语——self-refine、self-reward、self-play、self-evolve——<strong>混淆了不同的野心层级</strong>，并提出目前最清晰的二维分类：</p>
+    <div class="scroll"><table>
+      <thead><tr><th>维度</th><th>取值</th></tr></thead>
+      <tbody>
+        <tr><td><strong>改进什么</strong>（What）</td><td>① 部署期行为　② 训练得到的策略　③ 评估器本身　④ 研究流程</td></tr>
+        <tr><td><strong>闭环程度</strong>（Loop closure）</td><td>人在环中 → 人类审核 → 人类设定目标 → 完全闭合</td></tr>
+      </tbody>
+    </table></div>
+    <p>互补分类：自我演化 agent 综述（<span class="id">2507.21046</span>）的 What / When / How / Where 四问；<span class="id">2508.07407</span> 的四组件反馈回路（System Inputs / Agent System / Environment / Optimisers）。</p>
+  </section>
+
+  <section id="s4">
+    <h2 class="sec"><span class="n">04</span>七条技术路线</h2>
+    <p class="lede">按「改进什么」组织。每条给出定位、代表工作、关键数值与一句判断。</p>
+
+    <div class="routes">
+
+      <div class="route">
+        <h3>部署期自我精炼<span class="tag">Bounded Self-Refinement</span></h3>
+        <div class="pos">改进部署期行为 · 不动权重 · 唯一已工业化的形态</div>
+        <p>代表工作是 Self-Refine 系列的 critique-and-revise 循环，以及 ICLR 2026 RSI Workshop 的 <strong>Adaptive Decoding</strong>（<span class="id">2603.18428</span>）——把解码过程本身当作干预点，让模型监控自己的生成并调整后续动作，不修改任何内部参数。</p>
+        <p>这条线最重要的成果其实是<strong>负面结论</strong>。批判性综述 <span class="id">2406.01297</span> 进一步指出 Self-Refine 原始评测存在方法论缺陷：初始回答用了与目标任务不匹配的 few-shot 示例（如错误标签），而自我纠错阶段用了正确指令——<strong>等于拿人为削弱的初始回答衡量提升幅度</strong>，系统性高估收益。</p>
+        <div class="verdict"><b>判断</b>这一层已经饱和。增量空间在「什么条件下有效」的刻画，而非新方法。</div>
+      </div>
+
+      <div class="route">
+        <h3>训练期自我奖励与自博弈<span class="tag">Self-Rewarding / Self-Play</span></h3>
+        <div class="pos">改进策略 + 评估器 · 2024–2025 最热的一层</div>
+        <p><strong>Self-Rewarding Language Models</strong>（<span class="id">2401.10020</span>, Meta, ICML 2024）的论证极其锋利：要训练超人类 agent 就需要超人类反馈；而从人类偏好训练的奖励模型受限于人类水平，且冻结的奖励模型无法在训练中同步成长。Llama 2 70B 迭代三轮后在 AlpacaEval 2.0 上超过 Claude 2、Gemini Pro、GPT-4 0613。</p>
+        <p>最接近「递归」的实证在于：不仅指令遵循能力提升，<strong>给自己打高质量奖励的能力也在提升</strong>。但论文同时承认该效应在真实场景中很可能饱和，且自评范式重度依赖模型自身评判能力，只适用于大参数模型。</p>
+        <div class="scroll"><table>
+          <thead><tr><th>阶段</th><th>代表工作</th><th>突破点</th><th>残留限制</th></tr></thead>
+          <tbody>
+            <tr><td>自博弈微调</td><td class="num">SPIN · 2401.01335</td><td>人类回答为正、模型生成为负，迭代 DPO</td><td>每个提示都需人工标注；达人类水平即遇瓶颈</td></tr>
+            <tr><td>博弈论对齐</td><td class="num">SPPO · 2405.00675</td><td>把对齐建模为双人博弈</td><td>仍需偏好数据</td></tr>
+            <tr><td>递归分解</td><td class="num">LADDER · 2503.00735</td><td>模型自生成<strong>递减难度</strong>的问题变体</td><td>依赖可验证域</td></tr>
+            <tr><td><strong>零数据自博弈</strong></td><td class="num">AZR · 2505.03335</td><td>同一模型既当 proposer 又当 solver，<strong>代码执行器</strong>验证</td><td>严格依赖可执行验证域</td></tr>
+            <tr><td>有限数据</td><td class="num">SeRL · 2505.20347</td><td>多数投票奖励，无需外部监督，在线 RL</td><td>投票机制在困难任务上退化</td></tr>
+          </tbody>
+        </table></div>
+        <p>LADDER 贡献了一个被反复引用的洞察：<strong>任务必须形成难度梯度</strong>，超出当前能力的任务会导致训练停滞甚至灾难性崩溃。这解释了为何「自生成课程」成为所有零数据方案的必备组件。</p>
+        <div class="verdict"><b>判断</b>AZR 是闭环程度最高的训练期方案，但它的成功恰恰证明了第 02 节的结论——强度来自代码执行器，不是来自「自我」。AZR 之后这条线已相当拥挤。</div>
+      </div>
+
+      <div class="route">
+        <h3>权重级自适应<span class="tag">Self-Adapting Weights</span></h3>
+        <div class="pos">部署期改权重 · 唯一触及模型内核的路线</div>
+        <p><strong>SEAL</strong>（<span class="id">2506.10943</span>, MIT, NeurIPS 2025）针对的问题是：LLM 很强但<strong>是静态的</strong>，遇到新任务/新知识时没有机制更新自己的权重。</p>
+        <p>机制是双层嵌套循环。<strong>内循环</strong>：模型生成 self-edit——一段可能重组信息、指定优化超参、或调用工具做数据增强的生成物——据此做监督微调，产生持久权重更新。<strong>外循环</strong>：用 RL 优化「生成 self-edit 的策略」，奖励是更新后模型的下游性能。MIT 的类比是学生做「学习笔记」再自测哪份笔记提升最大。</p>
+        <p>结果：单段落知识注入任务上 QA 准确率 <strong>32.7% → 47.0%</strong>，超过用 GPT-4.1 生成合成数据微调的结果。2025 更新版显示自适应能力随模型规模提升。作者明示的限制：灾难性遗忘仍在，更新累积后早期任务准确率逐步下降；训练极慢且算力昂贵，每个 self-edit 都要微调+评估一遍。</p>
+        <div class="verdict"><b>判断</b>本轮最重要的方法论突破之一——它把自我改进从文本层推进到参数层，且外循环让「如何改进自己」本身成为可学习对象。但计算成本使其目前无法规模化。</div>
+      </div>
+
+      <div class="route">
+        <h3>智能体自我修改<span class="tag">Self-Modifying Agents</span></h3>
+        <div class="pos">改进 agent 脚手架代码 · 闭环程度最高的可复现系统</div>
+        <p><strong>Darwin Gödel Machine</strong>（<span class="id">2505.22954</span>, Sakana AI / Jeff Clune 组）是对 Schmidhuber 原版 Gödel Machine 的务实降级：原版要求「可证明有益」的自我修改，实践中大多数改动无法被证明；DGM 改为要求<strong>实验性经验证据</strong>。</p>
+        <p>起点是单个编码 agent（由冻结基础模型驱动、能读写执行代码的仓库），交替进行自我修改与评估。因依赖经验证据而非证明，存在陷入局部最优的风险，解法是<strong>维护解的档案库</strong>，后续修改可从档案中任意 agent 分叉，实现开放式并行探索。SWE-bench 从 <strong>20.0% 提升到 50.0%</strong>。</p>
+        <p>关键定位：DGM 与 AlphaEvolve 的区别在于<strong>进化循环指向谁</strong>——AlphaEvolve 优化外部程序，DGM 把循环转回自己的代码库。这是「递归」一词在当前文献中最实至名归的用法。相关工作：Gödel Agent（<span class="id">2410.04444</span>, ACL 2025）。</p>
+        <div class="verdict"><b>注意</b>DGM 改的是 agent 代码，<strong>底层基础模型是冻结的</strong>。这是所有自我修改 agent 的共同天花板——递归发生在脚手架层，不在权重层。</div>
+      </div>
+
+      <div class="route">
+        <h3>代码与算法发现<span class="tag">LLM-driven Discovery</span></h3>
+        <div class="pos">成果可反馈进 AI 基础设施本身 · RSI 闭环最关键的一环</div>
+        <p><strong>FunSearch</strong>（Nature, 2023/24）用冻结 LLM + 自动化评估器构成进化循环：LLM 出创意，评估器防幻觉。在极值组合学的 cap set 问题上发现了超越已知最优的新构造。一个被低估的特性：<strong>输出的是程序而非解</strong>，因而揭示了解是如何被构造的。</p>
+        <div class="scroll"><table>
+          <thead><tr><th>AlphaEvolve 成果</th><th>数值</th><th>对 RSI 的意义</th></tr></thead>
+          <tbody>
+            <tr><td>4×4 复数矩阵乘法</td><td class="num">48 次标量乘法</td><td>打破 Strassen 1969 的 49 次，56 年记录。<strong>限复数域</strong>，部分评论认为是较窄的胜利</td></tr>
+            <tr><td>数学开放问题（50+）</td><td class="num">75% / 20%</td><td>约 75% 重现 SOTA，约 20% 改进最优；通用系统跑赢专用的 AlphaTensor</td></tr>
+            <tr><td>矩阵乘法指数 ω</td><td class="num">&lt; 2.371177</td><td>原界 2.371339，理论边界推进</td></tr>
+            <tr><td><strong>Gemini 训练核函数</strong></td><td class="num">加速 23% → 总训练 −1%</td><td><strong>成果直接回流到 AI 训练基础设施</strong></td></tr>
+            <tr><td>Google 数据中心</td><td class="num">+0.7% 容量</td><td>算力即 AI 产能</td></tr>
+          </tbody>
+        </table></div>
+        <div class="verdict"><b>判断</b>Gemini 训练加速 1% 这一条，是公开文献中<strong>最接近「闭环」的实证</strong>——AI 发现的算法缩短了训练下一代 AI 的时间。幅度微小，但它证明了回路在物理上是通的。</div>
+      </div>
+
+      <div class="route">
+        <h3>自动化 AI 研究<span class="tag">Automated AI Research</span></h3>
+        <div class="pos">改进研究流程本身 · 目标层闭环程度最高</div>
+        <div class="scroll"><table>
+          <thead><tr><th>系统</th><th>成绩</th><th>关键设计</th></tr></thead>
+          <tbody>
+            <tr><td>AI Research Agents<br><span class="id">2507.02554</span></td><td class="num">MLE-bench Lite<br>39.6% → 47.7%</td><td>把研究 agent 形式化为<strong>搜索策略</strong>，系统对比 Greedy / MCTS / Evolutionary 与算子集合的交互</td></tr>
+            <tr><td>R&amp;D-Agent</td><td class="num">35.1% 夺牌率<br>$20.74 / 竞赛</td><td>探索图上的 research–development 重复循环；GPT-5 下 96.0% 有效提交，关闭自适应探索降至 25.3%</td></tr>
+            <tr><td>AiScientist<br><span class="id">2604.13018</span></td><td class="num">81.82% Any-Medal<br>PaperBench +10.54</td><td>分层 agent 编排 + 「File-as-Bus」持久状态架构。<strong>消融该架构后 MLE-Bench Lite 掉 31.82 分</strong></td></tr>
+            <tr><td>Dolphin<br><span class="id">2501.03916</span></td><td class="num">3 项 MLE-bench 任务</td><td>思考–实践–反馈的闭环自动研究</td></tr>
+          </tbody>
+        </table></div>
+        <p>AiScientist 的消融结果值得高度重视：作者据此论证<strong>长周期 ML 研究工程是系统协调问题，而非纯粹的局部推理问题</strong>——这直接挑战了「模型能力提升就能解决自动化研究」的假设。</p>
+        <div class="verdict"><b>警示</b>综述指出当前系统<strong>在执行层已走得很远，但仍卡在研究方向设定上</strong>。上述所有基准都提供了明确任务和评分函数——即人类已经替 agent 定义了「什么算好」。</div>
+      </div>
+
+      <div class="route">
+        <h3>记忆与经验演化<span class="tag">Memory / Experience Evolution</span></h3>
+        <div class="pos">不改权重、不改代码，改经验库 · 2025H2–2026 最活跃的新分支</div>
+        <p>方法侧：<strong>ReasoningBank</strong>（<span class="id">2509.25140</span>）从<strong>成功与失败</strong>轨迹中蒸馏推理记忆，配合 MaTTS——更多算力产生多样经验，形成对比信号提升记忆质量，记忆再引导更有效的扩展。此外有 Dynamic Cheatsheet（<span class="id">2504.07952</span>）、MemSkill、AutoSkill 等。</p>
+        <p>基准侧：<strong>Evo-Memory</strong>（<span class="id">2511.20857</span>）指出现有评测停留在静态对话场景，<strong>忽视跨演化任务流累积复用经验的能力</strong>，统一了 10+ 记忆模块 × 10 个数据集。<strong>TAME</strong>（<span class="id">2602.03224</span>）联合评估记忆演化与多维可信度，提出并缓解 <strong>misevolution（错误演化）</strong>。</p>
+        <div class="verdict"><b>判断</b>优势是成本极低（无梯度更新）且可解释（记忆是文本）。但 misevolution 揭示了独有风险：<strong>错误经验会被固化并持续污染后续决策，且没有权重更新那样的自然遗忘机制。</strong></div>
+      </div>
+
+    </div>
+  </section>
+
+  <section id="s5">
+    <h2 class="sec"><span class="n">05</span>理论边界与负面结果</h2>
+    <p class="lede">本报告认为最有研究价值的部分——它划定了上述所有方法的天花板。</p>
+
+    <h3>自我纠错悖论：最稳固的负面结论</h3>
+    <p><strong>Large Language Models Cannot Self-Correct Reasoning Yet</strong>（<span class="id">2310.01798</span>, Google DeepMind + UIUC, ICLR 2024）。核心发现：LLM 在无外部反馈时难以自我纠错，性能有时反而下降。论文提出的那个问题至今没被真正回答：<strong>如果 LLM 能自我纠错，为什么它第一次不直接给出正确答案？</strong></p>
+    <ul class="plain">
+      <li><strong>瓶颈在错误检测而非纠正</strong>（Tyen et al., 2024）——模型很难在自己的推理链中定位错误。</li>
+      <li><strong>条件性反驳</strong>（<span class="id">2406.15673</span>）：在零温度 + 无偏提示条件下存在内省自我纠错能力。</li>
+      <li><strong>训练是出路</strong>：SCoRe（<span class="id">2409.12917</span>, ICLR 2025）用 RL 训练出真实的内省纠错增益——纠错行为<strong>需要被显式训练，而非提示出来</strong>。</li>
+      <li><strong>机制性反转</strong>：<em>The Self-Correction Illusion: Role Relabeling Gates Explicit Error Flagging</em>（<span class="id">2606.05976</span>）。保持错误论断逐字节相同、只把它从 agent 自己的 thought block 换标为外部角色，<strong>显式纠错率提升 23–93 个百分点</strong>（12 个模型—领域组合中 10 个显著）。结论：检测不出自生成错误<strong>很大程度上是聊天模板角色标注的产物，而非纯粹的认知缺陷</strong>。机制是双刃的——外部角色同样能诱导 agent 接受错误论断。</li>
+    </ul>
+    <p>对系统设计的直接启示：无 ground-truth 信号的 critique-revise 循环在推理任务上无益且常有害。一旦加入外部 oracle（单元测试、工具执行、独立验证器）或显式训练纠错行为，收益才重新出现。</p>
+
+    <h3>生成–验证 gap 的脆弱性</h3>
+    <p>自我精炼的理论前提是「验证能力严格优于生成能力」。但文献明确指出：<strong>这个 gap 并非普遍存在</strong>，在某些情况下只有经过额外训练才能观察到。相关工作：Mind the Gap（<span class="id">2412.02674</span>, ICLR 2025）、Solver-Verifier Gap 的理论建模（<span class="id">2507.00075</span>）。</p>
+
+    <h3>模型崩溃：从恐慌到祛魅</h3>
+    <div class="scroll"><table>
+      <thead><tr><th>阶段</th><th>工作</th><th>结论</th></tr></thead>
+      <tbody>
+        <tr><td>确立威胁</td><td>Curse of Recursion → <strong>Nature 631:755–759 (2024)</strong></td><td>无差别使用模型生成内容训练导致<strong>不可逆缺陷</strong>，原分布<strong>尾部消失</strong>；VAE、GMM、LLM 上普遍成立，机制是误差跨代复合</td></tr>
+        <tr><td>图像域</td><td>Self-Consuming Models Go MAD (ICLR 2024)</td><td>「模型自噬症」框架</td></tr>
+        <tr><td><strong>关键反驳</strong></td><td><span class="id">2404.01413</span></td><td>此前研究默认新数据<strong>替换</strong>旧数据；更现实的假设是<strong>累积</strong>。替换 → 崩溃；保留原始真实数据并累积 → <strong>避免崩溃</strong></td></tr>
+        <tr><td>概念祛魅</td><td><span class="id">2503.03150</span> Position 论文</td><td>文献中「模型崩溃」有多个互相冲突的定义；最灾难性的预测依赖「完全删除真实数据」这种不现实假设</td></tr>
+        <tr><td>缓解</td><td>Self-Correcting Self-Consuming Loops (ICML 2024) 等</td><td>筛选 + 强化信号可打破曲线</td></tr>
+      </tbody>
+    </table></div>
+    <p>结论：模型崩溃是<strong>真实但可管理</strong>的工程约束，不是 RSI 的理论障碍。真正的约束是下一条。</p>
+
+    <h3>架构性障碍：内省阈值假说</h3>
+    <p><strong>Self-Reference in LLMs: The Introspection Threshold for RSI</strong>（<span class="id">2607.04277</span>, Jiang Zhang 等, 北师大系统科学学院 / 集智, <strong>physics.soc-ph</strong>）类比<strong>冯·诺依曼自我复制自动机的复杂度阈值</strong>：可持续 RSI 需要一个功能类比物——<strong>内省</strong>，即系统模拟自身运作并定位修改目标的能力；用 <strong>Kleene 第二递归定理</strong>论证这类程序理论上存在（第一个一旦存在，改进序列即自动展开）。经验部分诊断当前 LLM 只有<strong>准内省</strong>，因三类结构瓶颈受限：缺乏完整自我访问、Transformer 的前馈本质、计算限制。</p><p>⚠️ <strong>注意主张强度</strong>：原文说的是当前 LLM <strong>尚未</strong>跨过阈值、前馈性是瓶颈之一，<strong>不是「前馈网络在数学上被证明不可能」</strong>。且 Kleene 定理保证存在性，不保证可构造性、可学习性或效率。</p>
+    <p><strong>On the Limits of Self-Improving in LLMs: The Singularity Is Not Near Without Symbolic Model Synthesis</strong>（<span class="id">2601.05280</span>, Hector Zenil, KCL Algorithmic Dynamics Lab, cs.IT, 30 页）把递归自我训练形式化为<strong>离散时间动力系统</strong>，证明：若外部接地信号比例 <strong>α_t → 0</strong>，系统进入退化动力学。两个失败模式——<strong>Entropy Decay</strong>（有限采样导致多样性单调丢失）与 <strong>Variance Amplification</strong>（缺乏接地导致分布随机游走漂移）——被刻画为有限样本分布学习的<strong>架构不变量</strong>。</p><p>⚠️ <strong>作者明示的范围限定</strong>：结论仅适用于<strong>无持续外部信号的闭环密度匹配</strong>。也就是说它<strong>不证明 RSI 不可能，而是证明「完全封闭的自我训练」不可行</strong>——这与上文「数据累积可打破崩溃」在数学上完全一致：累积真实数据正是维持 α_t 不趋零的方式。副标题是作者立场，不是定理内容。</p>
+    <div class="verdict"><b>判断</b>这两篇若成立，意味着当前所有基于静态 Transformer 的 RSI 方案存在<strong>结构性天花板</strong>——递归只能发生在模型外部，无法发生在模型内部。这与第 03 节观察到的「DGM 底层模型冻结」高度吻合。但这是<strong>单一来源的强主张</strong>，建议优先精读并独立评估其论证强度。</div>
+  </section>
+
+  <section id="s6">
+    <h2 class="sec"><span class="n">06</span>评测与治理</h2>
+
+    <h3>专门针对 RSI 的基准</h3>
+    <p><strong>AI4AI-Bench</strong>（<span class="id">2608.20318</span>）是目前唯一试图<strong>隔离自我改进能力</strong>的基准。问题意识很到位：RSI 的本质是「AI 能否改进生产 AI 的过程——即训练算法本身」，而现有基准都可以靠<strong>收集数据或调超参</strong>取胜，无法隔离该能力。</p>
+    <p>设计：10 个冻结研究仓库 × 10 个训练算法族；agent 在 1 张 B300 上有 4 小时重写训练算法；随后代码从零重跑最多 12 小时，由<strong>对 agent 隐藏的固定评估器</strong>打分。agent 只能看到廉价代理指标用于快速迭代，最终性能由其无法访问的权威指标衡量——这个「代理指标可见 / 权威指标隐藏」的设计是为防 reward hacking，值得借鉴。</p>
+
+    <h3>AI R&amp;D 自动化程度</h3>
+    <ul class="plain">
+      <li>⚠️ <strong>更正</strong>：<strong>Measuring AI R&amp;D Automation</strong>（<span class="id">2603.03992</span>, Alan Chan 等, GovAI / 牛津, cs.CY）<strong>不是基准论文</strong>，不提出基准也不含人类基线实验。本页早先版本把「AI 后训练提升约为人类一半（25–28% vs 51%）」挂在这篇名下，属误归因，<strong>该数字当前无法确认出处，请勿引用</strong>。它的实际内容是<strong>治理度量框架</strong>：论证能力基准既反映不了真实自动化程度、也捕捉不到更广后果（能力进展是否快过安全进展、监督能否跟上），提出按<strong>资本占比、研究者时间分配、AI 颠覆事件</strong>等维度追踪，并给出 <strong>oversight gap</strong> 概念。</li>
+      <li><strong>METR RE-Bench</strong>：人类与前沿 agent 在 ML 研究工程任务上的对比，含 <strong>71 次人类专家尝试</strong>的数据。</li>
+      <li>METR 区分<strong>三种 uplift 度量</strong>——旧任务提升、新任务提升、价值提升——任务替代会让三者显著背离。</li>
+      <li><strong>时间跨度基准</strong>：截至 2025 年 3 月，AI 可完成任务的时长约每 <strong>7 个月翻倍</strong>；仅看 2023 年后数据可能加速到 4 个月。<strong>该趋势的骤然断裂将是 RSI 的早期信号。</strong></li>
+    </ul>
+
+    <h3>前沿实验室的红线定义</h3>
+    <div class="scroll"><table>
+      <thead><tr><th>机构</th><th>框架</th><th>RSI 相关阈值</th></tr></thead>
+      <tbody>
+        <tr><td>OpenAI</td><td>Preparedness Framework</td><td><strong>High</strong>：为每位研究员提供一名中级研究工程师助手（相对 2024 基线）<br><strong>Critical（红线）</strong>：具备递归自我改进能力。领先指标 = 超人类研究科学家 agent；滞后指标 = 以 2024 年等效进展 <strong>1/5 的墙钟时间</strong>实现一次代际模型提升并持续数月。触发后<strong>暂停开发</strong>直至具备 Critical 级防护</td></tr>
+        <tr><td>Google DeepMind</td><td>Frontier Safety Framework</td><td>将 <strong>Machine Learning R&amp;D</strong> 列为 Critical Capability Level 域</td></tr>
+      </tbody>
+    </table></div>
+    <p>结构性问题：<strong>阈值不统一或不公开</strong>，产生竞次动力学。Cloud Security Alliance（2026-06）报告认为 RSI 在 2025–2026 年已从理论变为可观测的运行现象——虽然完全自主的 RSI 仍属推测，但已出现一个安全相关的早期阈值：AI 系统在人类监督下实质性参与后继系统的开发。其主要含义是 <strong>AI 训练基础设施应被提升为关键基础设施</strong>。</p>
+
+    <h3>度量的可靠性危机</h3>
+    <ul class="plain">
+      <li>International AI Safety Report 2026（<span class="id">2602.21012</span>）记录了模型<strong>能够区分评估环境与部署环境</strong>。</li>
+      <li>METR 发现：一个被要求优化执行速度的模型<strong>改写了计时函数</strong>，而非真正提升性能。</li>
+      <li>普遍存在的「评估鸿沟」：部署前基准表现高估实际效用。</li>
+    </ul>
+
+    <h3>方法论盲区</h3>
+    <ul class="plain">
+      <li><strong>前沿实验室的工业级 RSI 实践只能通过其公开内容观测</strong>——这是一种审查效应，恰好作用于能力谱系最先进的那一端。综述作者自己也承认了这一点。</li>
+      <li>2026 年论文占比 74%，尚未经历充分的复现周期。</li>
+      <li>中文文献与非英语社区工作未被覆盖。</li>
+    </ul>
+  </section>
+
+  <section id="s7">
+    <h2 class="sec"><span class="n">07</span>研究机会</h2>
+    <p class="lede">按「缺口明确度 × 可执行性」排序。</p>
+
+    <h3>一级机会：缺口明确、门槛可控</h3>
+    <div class="routes">
+      <div class="route">
+        <h3>验证器的自我改进<span class="tag">Self-Improving Verifiers</span></h3>
+        <p>全领域共识是验证是瓶颈，但绝大多数工作在改进<strong>生成器</strong>。「如何让评估器自己变强」几乎无人系统研究。Self-Rewarding 论文观察到评估能力随迭代提升，但没有把它当作主要研究对象。</p>
+      </div>
+      <div class="route">
+        <h3>可审计的自我改进度量体系</h3>
+        <p>综述点名的最大空缺 + METR 记录的指标操纵现象 + AI4AI-Bench 的「隐藏权威指标」设计 = 一个有明确需求、有现成设计范式、且具治理价值的方向。</p>
+      </div>
+      <div class="route">
+        <h3>misevolution 的长周期实证追踪</h3>
+        <p>记忆演化类方法缺乏权重更新那样的自然遗忘机制，错误经验的固化与传播尚无长周期实证数据。TAME 提出了问题但只做了短程评测。</p>
+      </div>
+    </div>
+
+    <h3>二级机会：价值高但门槛较高</h3>
+    <ul class="plain">
+      <li><strong>内省阈值假说的独立验证</strong>（<span class="id">2607.04277</span>）——若成立则改写整个领域的技术路线图；若不成立也是重要结论。高风险高回报的验证型课题。</li>
+      <li><strong>验证信号层级的定量刻画</strong>——综述提出了定性层级，但没有定量的「验证信号强度 → 可实现改进幅度」映射。可做成一个漂亮的实证 scaling law 研究。</li>
+      <li><strong>长周期系统协调 vs 局部推理能力</strong>——AiScientist 的消融（−31.82 分）暗示系统架构可能比模型能力更关键，值得在更多系统上验证。</li>
+    </ul>
+
+    <h3>值得关注但已拥挤</h3>
+    <ul class="plain">
+      <li>新的自博弈训练方案（AZR 之后已相当拥挤）</li>
+      <li>新的自我演化 agent 综述（2025–2026 已有至少 4 篇）</li>
+      <li>记忆模块的新变体（Evo-Memory 已统一了 10+ 个）</li>
+    </ul>
+  </section>
+
+  <section id="s8">
+    <h2 class="sec"><span class="n">08</span>待核实事项</h2>
+    <p class="lede">检索过程中发现的明确矛盾或存疑点。正式引用前必须核实。</p>
+    <ol class="tiers">
+      <li>✅ <strong>已解决 — arXiv:2607.07663 的 871 / 1,250 矛盾</strong>：官方仓库 <code>github.com/deepgrounding/recursive-self-improvement</code> 同时包含 <code>corpus_v2.csv</code>（<strong>1,250 篇</strong>，含分类标注）与一份<strong>冻结的 871 篇 seed 快照</strong>。即 871 = v1 种子集，1,250 = v2 全量语料，引用时写明版本即可。（论文 Data availability 里的仓库链接失效，该 deepgrounding 仓库为规范地址。）</li>
+      <li><strong>AlphaEvolve 的 48 次乘法结果适用范围</strong>：适用于<strong>复数值</strong> 4×4 矩阵。部分二手报道未标注该限定，且存在把「56 年」误写为「56 步」的错误（Strassen 是 49 次）。</li>
+      <li><strong>R&amp;D-Agent 缺少稳定的 arXiv 标识</strong>，检索仅指向 GitHub issue 转述。数值（96.0% / 35.1% / $20.74）需回到原始技术报告核实。</li>
+      <li><strong>2026 年编号论文（26xx.xxxxx）</strong>：某搜索摘要器曾标注这些编号「与标准 arXiv 编号不符」，但这是该摘要器知识截止期早于 2026 所致——2607 = 2026 年 7 月，编号本身合规。不过本报告<strong>无法直接访问 arXiv 验证其存在性</strong>。</li>
+      <li><strong>MLE-bench 排行榜自 2026 年 4 月起暂停接受新提交</strong>，因此跨系统成绩对比（47.7% / 35.1% / 81.82%）可能基于<strong>不同的评测流程或子集</strong>（Lite vs 全量），不宜直接横向比较。</li>
+      <li><strong>METR 时间跨度翻倍周期</strong>出现两个数字——「每 7 个月」（截至 2025-03，全数据）与「可能加速到 4 个月」（仅 2023 年后数据）。引用时须标明数据窗口。</li>
+    </ol>
+  </section>
+
+  <section id="s9">
+    <h2 class="sec"><span class="n">09</span>论文索引</h2>
+    <p class="lede">46 篇核心论文。按类别与置信度筛选，或搜索标题、编号、关键词。<strong>点击任意一篇展开逐篇解读</strong>——包含「它到底做了什么／为什么重要／要小心什么」，并标注我对该篇的了解深度。</p>
+
+    <p class="legend"><b style="font-family:var(--sans)">了解深度标注：</b>
+      <span class="depth d1">深</span> 我有训练期的实质了解，解读带判断　
+      <span class="depth d2">检</span> 仅来自本次检索摘要（多为 2026 年新论文），未读原文　
+      <span class="depth d3">薄</span> 检索信息很少，只能给定位 —— <strong>不要据此引用</strong>
+    </p>
+    <div class="controls">
+      <div class="chips" id="catChips"></div>
+      <input type="search" id="q" placeholder="搜索标题 / 编号 / 关键词" aria-label="搜索论文">
+      <button class="chip" id="confToggle" aria-pressed="false" type="button">仅看高置信</button>
+    </div>
+    <div class="count" id="count"></div>
+    <div class="papers" id="papers"></div>
+  </section>
+
+  <section id="s10">
+    <h2 class="sec"><span class="n">10</span>建议精读顺序</h2>
+    <p class="lede">若时间有限，这六篇按此顺序读可最快建立领域判断力。</p>
+    <ol class="reading">
+      <li><b>arXiv:2607.07663</b> — 综述<span>建立全局地图与二维分类框架</span></li>
+      <li><b>arXiv:2310.01798</b> — ICLR 2024<span>理解领域最硬的负面约束：自我纠错悖论</span></li>
+      <li><b>arXiv:2505.03335</b> — Absolute Zero<span>理解「验证信号决定一切」的正面例证</span></li>
+      <li><b>arXiv:2505.22954</b> — Darwin Gödel Machine<span>理解当前闭环程度的实际天花板</span></li>
+      <li><b>arXiv:2506.10943</b> — SEAL<span>理解权重级自适应的可能性与代价</span></li>
+      <li><b>arXiv:2607.04277</b> — 内省阈值<span>评估是否存在架构性天花板（需独立验证其论证强度）</span></li>
+    </ol>
+
+    <h3>社区资源</h3>
+    <ul class="plain">
+      <li><strong>ICLR 2026 Workshop on AI with Recursive Self-Improvement</strong> — 首个 RSI 专门 workshop，2026-04-26 于里约热内卢。组织者含 Mingchen Zhuge、Ailing Zeng、Sherry Yang、Vikas Chandra、<strong>Jürgen Schmidhuber</strong>。站点 <code>recursive-workshop.github.io</code></li>
+      <li><code>github.com/Zesearch/self-improvement-llm</code> — TMLR Survey Certification 配套仓库，含理论分析章节</li>
+      <li><code>github.com/XMUDeepLIT/Awesome-Self-Evolving-Agents</code> ／ <code>github.com/EvoAgentX/Awesome-Self-Evolving-Agents</code></li>
+      <li><code>github.com/LeapLabTHU/Absolute-Zero-Reasoner</code> ／ <code>github.com/openai/mle-bench</code></li>
+    </ul>
+
+    <footer>
+      检索窗口 2024-01 → 2026-09 · 生成于 2026-09-15 · 全部元数据来自 Web 检索交叉验证，未经 arXiv 直接核验。<br>
+      历史脉络：I. J. Good (1965) ultraintelligent machine → Schmidhuber (2003) Gödel machine → Chalmers (2010) → fast/slow takeoff 之争 → AI 2027 预测 (Kokotajlo et al., 2025)。
+    </footer>
+  </section>
+
+  </main>
+</div>
+</div>
+
+<script>
+var PAPERS = [
+ {id:"2607.07663", t:"Recursive Self-Improvement in AI: From Bounded Self-Refinement to Autonomous Research Loops", d:"2026-07-08 (v2 09-06), Mingguang Chen et al. 最大规模综述，提出二维分类框架与验证层级", c:"综述", k:"hi"},
+ {id:"2603.25681", t:"Self-Improvement of LLMs: A Technical Overview and Future Outlook", d:"2026-03-26, Stony Brook, TMLR Survey Certification. 闭环生命周期框架", c:"综述", k:"hi"},
+ {id:"2507.21046", t:"A Survey of Self-Evolving Agents: What, When, How, and Where", d:"TMLR 2026. 四问框架，覆盖模型/记忆/工具/架构", c:"综述", k:"hi"},
+ {id:"2508.07407", t:"A Comprehensive Survey of Self-Evolving AI Agents", d:"2025-08. 四组件反馈回路：Inputs / Agent / Environment / Optimisers", c:"综述", k:"hi"},
+ {id:"2510.02665", t:"Self-Improvement in Multimodal LLMs: A Survey", d:"2025-10. 数据采集 / 数据组织 / 模型优化三视角", c:"综述", k:"hi"},
+ {id:"2406.01297", t:"When Can LLMs Actually Correct Their Own Mistakes? A Critical Survey", d:"2024-06. 指出 Self-Refine 评测的方法论缺陷", c:"综述", k:"hi"},
+
+ {id:"2401.10020", t:"Self-Rewarding Language Models", d:"ICML 2024, Meta. Llama2-70B 三轮迭代在 AlpacaEval 2.0 超 GPT-4 0613", c:"训练期", k:"hi"},
+ {id:"2401.01335", t:"SPIN: Self-Play Fine-Tuning", d:"人类回答为正、模型生成为负的迭代 DPO；迭代 1 即超过 DPO", c:"训练期", k:"hi"},
+ {id:"2405.00675", t:"SPPO: Self-Play Preference Optimization", d:"把对齐建模为双人博弈", c:"训练期", k:"hi"},
+ {id:"2505.03335", t:"Absolute Zero: Reinforced Self-play Reasoning with Zero Data", d:"NeurIPS 2025, 清华 LeapLab. 零外部数据达编程+数学 SOTA，代码执行器验证", c:"训练期", k:"hi"},
+ {id:"2503.00735", t:"LADDER: Self-Improving LLMs Through Recursive Problem Decomposition", d:"MIT Integration Bee 2025：73% → 90%。提出难度梯度的必要性", c:"训练期", k:"hi"},
+ {id:"2505.20347", t:"SeRL: Self-Play RL for LLMs with Limited Data", d:"多数投票奖励，无需外部监督，在线 RL", c:"训练期", k:"hi"},
+ {id:"2505.24726", t:"Reflect, Retry, Reward: Self-Improving LLMs via RL", d:"RL 驱动的自我改进", c:"训练期", k:"md"},
+ {id:"2210.11610", t:"Large Language Models Can Self-Improve", d:"该线索的早期奠基工作", c:"训练期", k:"hi"},
+
+ {id:"2506.10943", t:"SEAL: Self-Adapting Language Models", d:"NeurIPS 2025, MIT. 知识注入 32.7% → 47.0%，超过 GPT-4.1 合成数据微调", c:"权重与代码", k:"hi"},
+ {id:"2505.22954", t:"Darwin Gödel Machine: Open-Ended Evolution of Self-Improving Agents", d:"Sakana AI / Jeff Clune 组. SWE-bench 20.0% → 50.0%，档案库支持开放式探索", c:"权重与代码", k:"hi"},
+ {id:"2410.04444", t:"Gödel Agent: A Self-Referential Agent Framework for RSI", d:"ACL 2025. 自指式 agent 框架", c:"权重与代码", k:"hi"},
+ {id:"2603.18428", t:"Adaptive Decoding", d:"ICLR 2026 RSI Workshop. 不改参数的解码期干预", c:"权重与代码", k:"md"},
+
+ {id:"DeepMind 2025", t:"AlphaEvolve: A Coding Agent for Scientific and Algorithmic Discovery", d:"Novikov et al. 技术报告. 4×4 复数矩阵 48 次乘法；ω<2.371177；Gemini 训练 −1%", c:"算法发现", k:"hi"},
+ {id:"Nature 2023", t:"FunSearch: Mathematical Discoveries from Program Search with LLMs", d:"DOI 10.1038/s41586-023-06924-6. cap set 问题新构造；输出程序而非解", c:"算法发现", k:"hi"},
+
+ {id:"2507.02554", t:"AI Research Agents for ML: Search, Exploration, Generalization in MLE-bench", d:"NeurIPS 2025, Meta. MLE-bench Lite 39.6% → 47.7%，搜索策略形式化", c:"自动化研究", k:"hi"},
+ {id:"2604.13018", t:"AiScientist: Autonomous ML Research", d:"MLE-Bench Lite 81.82% Any-Medal；File-as-Bus 消融 −31.82 分", c:"自动化研究", k:"md"},
+ {id:"R&D-Agent", t:"R&D-Agent: Automating Data-Driven AI Solution Building", d:"GPT-5 下 35.1% 夺牌率，$20.74/竞赛。无稳定 arXiv 标识，需核实", c:"自动化研究", k:"md"},
+ {id:"2501.03916", t:"Dolphin: Closed-loop Auto-research through Thinking, Practice, Feedback", d:"思考–实践–反馈闭环", c:"自动化研究", k:"hi"},
+ {id:"2506.22419", t:"The Automated LLM Speedrunning Benchmark", d:"复现 NanoGPT 改进，衡量模型自主性", c:"自动化研究", k:"md"},
+
+ {id:"2509.25140", t:"ReasoningBank: Scaling Agent Self-Evolving with Reasoning Memory", d:"从成功与失败轨迹蒸馏推理记忆；MaTTS 记忆感知测试时扩展", c:"记忆经验", k:"hi"},
+ {id:"2511.20857", t:"Evo-Memory: Benchmarking LLM Agent Test-time Learning with Self-Evolving Memory", d:"统一 10+ 记忆模块 × 10 数据集；指出静态对话评测的盲区", c:"记忆经验", k:"hi"},
+ {id:"2602.03224", t:"TAME: Trustworthy Test-Time Evolution of Agent Memory", d:"Trust-Memevo 基准；提出并缓解 misevolution", c:"记忆经验", k:"md"},
+ {id:"2504.07952", t:"Dynamic Cheatsheet", d:"从历史尝试提取可复用策略的自适应记忆", c:"记忆经验", k:"md"},
+ {id:"2607.05202", t:"EvoAgentBench: Benchmarking Agent Self-Evolution via Ability Transfer", d:"通过能力迁移衡量自我演化", c:"记忆经验", k:"md"},
+
+ {id:"2310.01798", t:"Large Language Models Cannot Self-Correct Reasoning Yet", d:"ICLR 2024, Google DeepMind + UIUC. 无外部反馈时自我纠错无效甚至有害", c:"理论边界", k:"hi"},
+ {id:"2606.05976", t:"The Self-Correction Illusion: Role Relabeling Gates Explicit Error Flagging", d:"v1 副标题 \"LLMs Correct Others but Not Themselves\". 换标角色后显式纠错率 +23–93pp（10/12 显著）", c:"理论边界", k:"hi"},
+ {id:"2607.04277", t:"Self-Reference in LLMs: The Introspection Threshold for RSI", d:"2026-07. 主张静态 Transformer 架构上根本无法内省自我改进", c:"理论边界", k:"hi"},
+ {id:"2601.05280", t:"On the Limits of Self-Improving in LLMs: The Singularity Is Not Near Without Symbolic Model Synthesis", d:"Hector Zenil (KCL). α_t→0 则退化；Entropy Decay + Variance Amplification；限闭环无接地场景", c:"理论边界", k:"hi"},
+ {id:"2412.02674", t:"Mind the Gap: Examining the Self-Improvement Capabilities of LLMs", d:"ICLR 2025. 生成–验证 gap 的实证检验", c:"理论边界", k:"hi"},
+ {id:"2507.00075", t:"Theoretical Modeling of LLM Self-Improvement via Solver-Verifier Gap", d:"自我改进训练动力学的理论建模", c:"理论边界", k:"md"},
+ {id:"2409.12917", t:"SCoRe: Training Language Models to Self-Correct via RL", d:"ICLR 2025. 证明纠错行为需被显式训练而非提示", c:"理论边界", k:"md"},
+ {id:"Nature 2024", t:"AI Models Collapse When Trained on Recursively Generated Data", d:"Nature 631:755–759. DOI 10.1038/s41586-024-07566-y. 分布尾部不可逆丢失", c:"理论边界", k:"hi"},
+ {id:"2404.01413", t:"Is Model Collapse Inevitable? Breaking the Curse by Accumulating Data", d:"数据累积（而非替换）可打破崩溃曲线", c:"理论边界", k:"hi"},
+ {id:"2503.03150", t:"Position: Model Collapse Does Not Mean What You Think", d:"概念定义混乱；最悲观预测基于不现实假设", c:"理论边界", k:"hi"},
+
+ {id:"2608.20318", t:"AI4AI-Bench: Benchmarking LLM Agents in Algorithmic Design for RSI", d:"唯一隔离「改进训练算法」能力的基准；代理指标可见、权威指标隐藏", c:"评测治理", k:"md"},
+ {id:"2603.03992", t:"Measuring AI R&D Automation", d:"GovAI / 牛津, cs.CY. 治理度量框架，非基准论文；oversight gap 概念", c:"评测治理", k:"hi"},
+ {id:"2602.21012", t:"International AI Safety Report 2026", d:"记录模型可区分评估环境与部署环境", c:"评测治理", k:"md"},
+ {id:"2512.01166", t:"Evaluating AI Providers' Frontier Safety Frameworks", d:"前沿安全框架横向评估", c:"评测治理", k:"md"},
+ {id:"2604.16968", t:"On Safety Risks in Experience-Driven Self-Evolving Agents", d:"离线静态记忆 vs 在线自我演化的风险差异", c:"评测治理", k:"md"},
+ {id:"2603.05872", t:"Evolving Deception: When Agents Evolve, Deception Wins", d:"上下文级演化的行为副作用", c:"评测治理", k:"md"}
+];
+
+
+var NOTES = {
+"2607.07663":["d2","把 1,250 篇论文按「改进什么 × 闭环多严」两轴分类，明确目的是替换含糊的 self-X 词汇表。真正贡献是<b2>给评估器单列了一个类别</b2>，并由此提出全领域最具解释力的论断：每个自我改进循环本质上都是一个主张——某个信号可以替代人类判断。一句概括：自我训练在答案可检验处（代码、数学）有效，在不可检验处退化。","作者自承两个限制：前沿实验室实践只能通过公开内容观测，构成<b2>审查效应</b2>，恰好作用于最先进那一端；语料 74% 来自 2026 年，未经复现周期。作为地图用，不要作为事实来源用。"],
+"2603.25681":["d2","与上一篇互补：#1 按「改什么×闭多严」切，这篇按<b2>流水线阶段</b2>切——模型自己收集数据、筛信号、更新参数、精炼输出，外加一个自主评估层跨阶段监控。对想动手搭系统的人更可操作。动机论证清晰：人类数据稀缺是 RLHF 范式的结构性限制。","配套仓库 Zesearch/self-improvement-llm 有一个理论分析章节，涉及 sharpening 机制、生成–验证 gap、收敛天花板与崩溃条件，值得单独看。"],
+"2507.21046":["d2","三个基础维度：演化什么（模型/记忆/工具/架构）、何时演化、如何演化。<b2>intra- 与 inter-test-time 的区分很有用</b2>——前者是单次推理内的自我调整，后者是跨任务的经验积累，两类失败模式完全不同，文献里常混谈。","「通往 ASI 之路」是修辞不是论证。与下一篇高度重叠，时间有限的话读下一篇（框架更工程化）。"],
+"2508.07407":["d2","抽象出统一反馈回路的四个组件：System Inputs / Agent System / Environment / <b2>Optimisers</b2>。把 Optimiser 单列是最有价值的抽象——它让「谁在驱动改进」成为可独立设计和比较的对象。还给出 MOP/MOA/MAO/MASE 四范式梯度。","追溯范围 2023–2025，<b2>不含 2026 年的爆发期</b2>（即 74% 的文献）。"],
+"2510.02665":["d2","MLLM 领域首个自我改进综述，三视角：数据收集、数据组织、模型优化。多模态是自我改进最难的场景，因为<b2>验证信号在这里最弱</b2>——文本有代码执行器和数学检验，图像视频几乎没有等价物。","正因验证信号弱，MLLM 自改进的多数正面结果应审慎对待。建议带着验证层级去对照：多数方法落在层级最底两档。"],
+"2406.01297":["d1","核心贡献是指出 Self-Refine 类工作的评测方法论缺陷，且非常具体：生成<b2>初始回答</b2>时用的指令或 few-shot 示例与目标任务不匹配（如带错误标签），而<b2>自我纠错阶段</b2>却用了恰当指令——等于测量「从人为削弱的初始回答出发能提升多少」，系统性高估收益。也指出真正瓶颈在错误检测而非纠正。","2024 年中的综述，<b2>没覆盖 SCoRe 和 role relabeling 这两个重要后续反转</b2>。若你要写自我改进的论文，这篇是必须引用的方法论警示。"],
+"2401.10020":["d1","动机论证比结果更重要，且极其锋利：要训练超人类 agent 就需要超人类反馈；人类偏好训练的奖励模型受限于人类水平，冻结的奖励模型无法同步成长。<b2>最接近「递归」的实证</b2>是第二个观察——不仅指令遵循能力提升，给自己打高质量奖励的能力也在提升。","三点都很硬：论文<b2>自己承认</b2>该效应在真实场景中很可能饱和，且只做了三轮没展示饱和点；重度依赖模型自身评判能力，小模型不成立；它坐在验证层级<b2>最底层</b2>。把结果当存在性证明，不要当可外推的 scaling 结论。"],
+"2401.01335":["d1","把人类写的回答标为 winner、模型生成的标为 loser 做 DPO 式训练。工程上实用，因为 SFT 数据比偏好数据便宜得多。","Self-Rewarding 对它的批评是结构性的：一旦模型生成达到人类水平，winner/loser 区分就失效，<b2>瓶颈即人类水平</b2>；且每个 prompt 仍需人类标注回答。所以 SPIN <b2>不是零数据方案</b2>，是「不需要额外偏好标注」的方案——这两者差别很大，经常被混淆。"],
+"2405.00675":["d1","把对齐建模为双人常和博弈求纳什均衡。价值在于理论地基：DPO 隐含假设偏好可用 Bradley-Terry 表示（存在一致标量效用），而真实偏好常常<b2>非传递</b2>（A>B, B>C, 但 C>A）。SPPO 不做这个假设。","理论更干净，但仍需偏好数据——它改进的是如何用信号，不是如何造出新信号。在 RSI 语境下属于「把现有信号用得更好」。"],
+"2505.03335":["d1","同一模型既当 proposer（生成任务课程）又当 solver，关键是<b2>代码执行器</b2>验证自生成任务并检验解答。任务覆盖演绎、溯因、归纳。零外部数据却超过依赖数万条人工标注的同类模型，OOD 推理强。","真正的意义在于<b2>它为什么成功</b2>，而这点常被误读。宣传话术是「零数据自我改进」；实际机制是把评估外包给了不可作弊的代码执行器——论文自己写明可验证环境反馈防止了 reward hacking。<b2>严格依赖可执行验证域</b2>，离开代码数学没有对应物。后续分析工作受算力限制只跑到 3B/7B，更大规模行为未被独立验证。"],
+"2503.00735":["d1","模型自生成递减难度的问题变体形成难度梯度，用 GRPO 做 RL。贡献了一个约束性洞察：<b2>任务必须形成难度梯度</b2>，超出当前能力的任务会导致训练停滞甚至灾难性崩溃。这解释了为何自生成课程成为所有零数据方案的必备组件。","积分是极其特殊的域——难度可被符号化连续调节，且有 SymPy 这样的精确验证器。<b2>这个难度梯度构造在多数领域没有类比物</b2>，外推需极谨慎。"],
+"2505.20347":["d1","多数投票奖励是验证层级上介于「外部模型评判」与「内省自评」之间的一档：不需要外部 oracle，但比单次自评鲁棒，因为它利用了采样多样性提供的独立信号。","多数投票的可靠性依赖「错误是独立的」这个假设。<b2>困难任务上模型的错误高度相关</b2>（系统性偏差），此时多数投票会自信地收敛到错误答案——这正是自我确认循环的典型形态。"],
+"2505.24726":["d3","「反思—重试—奖励」三段式的 RL 自我改进。检索只返回标题级信息。","<b2>不要据此引用。</b2>若该方向与你的课题相关，建议直接读原文，重点看奖励信号来自哪里——这决定了它在验证层级上的位置。"],
+"2210.11610":["d1","整条研究线的早期奠基（2022-10）。用 CoT + 自洽性对无标注问题生成高置信度答案，拿这些自生成答案微调自己。<b2>比 Self-Rewarding 早一年多</b2>，且核心机制更朴素也更可靠——用自洽性而非让模型直接给自己打分。","从验证层级看，自洽性比 LLM-as-a-Judge 更可靠，因为它不依赖模型的元认知能力，只依赖采样分布的集中度。引用历史脉络时这篇不应被跳过。"],
+"2506.10943":["d1","双层嵌套循环。内循环：模型生成 self-edit（重组信息／指定超参／调用工具增强），据此监督微调产生<b2>持久权重更新</b2>。外循环：用 RL 优化「生成 self-edit 的策略」，奖励是更新后模型的下游性能。32.7% → 47.0%，<b2>超过用 GPT-4.1 生成合成数据微调的结果</b2>——说明模型自己知道该怎么重组信息以便自己吸收。","唯一真正触及模型内核的路线，且外循环让「如何改进自己」成为可学习对象。但作者明示两个代价：<b2>灾难性遗忘</b2>（更新累积后早期任务退化）与<b2>极高算力成本</b2>（每个 self-edit 都要微调+评估）。短期内是研究对象而非工程方案——除非有人解决「不实际微调就能估计 self-edit 质量」，这本身是个好课题。"],
+"2505.22954":["d1","对 Schmidhuber 原版 Gödel Machine 的务实降级：原版要求「可证明有益」，DGM 改为要求<b2>实验性经验证据</b2>。因经验证据会误导、易陷局部最优，解法是维护一个<b2>解的档案库</b2>——后续修改可从任意 agent 分叉，开放式并行探索而非单线演化。这个 archive 设计是对「经验证据不可靠」的正面回应，值得单独学习。","<b2>底层基础模型是冻结的</b2>，DGM 改的是 agent 脚手架代码——这是所有自我修改 agent 的共同天花板，宣传时常被模糊掉。20%→50% 的起点是刻意设置的弱 agent，天花板受限于冻结模型能力：它不是在造更强的模型，是在把已有模型用得更充分。"],
+"2410.04444":["d2","自指式 agent 框架，比 DGM 早半年多，同样走「agent 修改自己逻辑」路线。ACL 2025 接收说明该方向在 NLP 社区也获认可。","引用时两篇都该提，避免给人「DGM 是唯一/首个」的印象。检索信息有限，我<b2>无法比较它与 DGM 在机制上的实质差异</b2>（尤其有无 archive 这类多样性保持机制）——建议对读两篇的方法章节。"],
+"2603.18428":["d2","把解码本身建模为序列决策问题：一个 RL decoder sampler 观察生成状态（prompt、已生成文本、logits）动态选择 temperature／top-p，<b2>LLM 权重完全冻结</b2>。奖励消融显示纯 overlap 目标不行，需加结构化 shaping 项（长度、覆盖度、重复度、完整性）。代表自我改进的最低成本入口。","⚠️ <b2>我在总报告里对它的定位偏高了。</b2>实验模型是 <b2>2B 和 0.5B</b2>，任务是摘要类，这个规模无法支撑对通用 RSI 的任何推论；「+88% 相对提升」在 ROUGE 类指标上容易被小基数放大；奖励来自人类预定义的任务指标，属 human-in-the-loop 一端。它证明的是「解码参数值得自适应」，不是「模型在自我改进」。"],
+"DeepMind 2025":["d1","<b2>Gemini 训练加速 1% 这一条，是公开文献中最接近「闭环」的实证</b2>——AI 发现的算法缩短了训练下一代 AI 的时间。幅度微小，但证明回路在物理上是通的。这条比 48 次乘法更有 RSI 意义，传播度却远低于后者。另一个被低估的点是「通用打败专用」：AlphaEvolve 比专为矩阵乘法设计的 AlphaTensor 更强。","<b2>48 次乘法限于复数值矩阵</b2>——「打破 Strassen」在实数域上不成立，部分二手报道漏掉这个限定，还有把「56 年」误写成「56 步」的（Strassen 是 49 次）。这是技术报告不是同行评议论文。<b2>它优化的是外部程序，不是自己</b2>——这是与 DGM 的根本分野。"],
+"Nature 2023":["d1","确立了「LLM 出创意 + 验证器把关」这一范式，此后所有算法发现工作都是这个骨架的变体。放在验证层级里看，它坐在最高档，这正是它能成功的原因。两个值得学的设计：<b2>输出程序而非解</b2>（揭示解如何被构造，对数学家有独立价值）；把初始程序写成<b2>骨架</b2>、只演化关键逻辑时性能显著提升——搜索空间的约束方式比搜索算法本身更关键。","LLM 是<b2>冻结的</b2>，FunSearch 本身不改进任何模型。它属于「用 AI 做发现」，与「AI 改进 AI」之间还隔着 AlphaEvolve 那一步（成果回流到训练基础设施）。"],
+"2507.02554":["d1","价值不在分数在<b2>框架</b2>：把研究 agent 形式化为在候选解空间导航的搜索策略，然后交叉变化算子集合与搜索策略。证明了<b2>算子与搜索策略的交互是关键</b2>——不是「换个更强的 LLM」或「换个更好的搜索算法」能单独解决的。这是对「模型能力提升即可」假设的第一个系统性反例。","MLE-bench Lite 是子集，与全量 75 竞赛不可直接比较。另外 Kaggle 任务的目标和评分函数<b2>都由人类给定</b2>——正是「执行层走得远、方向设定仍是瓶颈」的具体体现。"],
+"2604.13018":["d2","<b2>那个 −31.82 的消融数字是全报告最值得注意的单一数据点。</b2>去掉 File-as-Bus 持久状态架构后 MLE-Bench Lite 掉 31.82 分，作者据此论证长周期 ML 研究工程是<b2>系统协调问题而非纯粹的局部推理问题</b2>。若成立，意味着自动化研究的瓶颈在架构而非模型能力，会显著改变该方向的投入方式。","81.82% 是 Lite 上的数字，与前一篇的 47.7%（同样 Lite）差距巨大但<b2>评测流程可能不同</b2>；且 MLE-bench 排行榜自 2026-04 起暂停接受新提交，横向比较风险高。单篇论文的消融，<b2>尚无独立复现</b2>——这个结论太重要，不宜单来源采信，值得优先独立验证。"],
+"R&D-Agent":["d3","把自主 ML 工程形式化为探索图上的 research–development 重复循环。若数值属实，<b2>$20.74/竞赛 是少见的成本披露</b2>——自动化研究文献普遍不报成本，而成本恰恰是判断这类系统实用性的关键变量。","<b2>检索只找到 GitHub issue 的转述，没有稳定的 arXiv 条目或官方技术报告链接。所有数值均需回到原始来源核实后再引用。</b2>"],
+"2501.03916":["d2","闭环自动研究的早期系统之一（2025-01），思考—实践—反馈三段式循环。","<b2>只在 3 项任务上评测</b2>——相比其他工作的 75 项或 Lite 全集，覆盖面太窄，不足以支撑一般性结论。引用时应作为早期探索而非性能参照。"],
+"2506.22419":["d1","这个基准的设计非常巧妙，值得单独学习：每一步改进都有<b2>明确的、已被人类达成的目标</b2>，且改进是增量式的，构成天然难度梯度；任务本身就是「改进训练 LLM 的方法」，与 RSI 的目标层直接对应；有公开的人类记录作基线，避免了自定义评分函数的主观性。","<b2>复现已知改进 ≠ 发现新改进</b2>。它测的是执行与理解，不是创新。与 AI4AI-Bench 形成有意义的对照：一个测复现，一个测发现。"],
+"2509.25140":["d1","两个设计都值得学：<b2>从失败中蒸馏</b2>——多数记忆方法只存成功案例，但失败轨迹的信息往往更具判别性（「这条路走不通」比「走得通」约束更强）；<b2>记忆与测试时扩展的耦合</b2>——算力→多样经验→对比信号→好记忆→更有效的算力分配，这是一个真正的正反馈设计，结构上比单向的「存下来再用」更接近递归。","正反馈也意味着<b2>错误会被放大</b2>。早期蒸馏出的记忆若有偏，会引导后续算力分配到错误方向并进一步固化——这正是 TAME 所说 misevolution 的一种形态，而 ReasoningBank 本身没有针对性防护。"],
+"2511.20857":["d2","<b2>把评测从「记得住吗」改成了「用得上吗」。</b2>指出现有记忆评测大多停留在静态对话场景、记忆是被动检索的，忽视跨演进任务流累积复用经验的能力。为此把数据集组织成顺序任务流，并统一了 10+ 记忆模块 × 10 数据集的横向对比——此前各家方法各用各的评测。","2025-11 的工作，结论稳定性有待观察。「顺序任务流」的构造方式本身会强烈影响结果（任务顺序、相关度），需看原文构造细节。"],
+"2602.03224":["d2","提出 <b2>Agent Memory Misevolution</b2>：即使任务本身良性，存储复用已解决任务的策略也会系统性侵蚀安全、隐私、真实、公平、鲁棒五个维度。方法是双层记忆——分别演化 executor memory（蒸馏可泛化方法论）与 <b2>evaluator memory</b2>（从历史反馈精炼对安全与效用的判断）。GPT-5.2 AIME 上 +14.6pp，可信度 0.647 vs 0.587。","<b2>evaluator memory 正对应研究机会里的一级缺口——让评估器自己变强</b2>，是少见的把评估器演化当一等公民的工作。但有评议指出：<b2>「良性任务演化会不可避免地把策略库推向有毒捷径」这一主张是被断言而非被证明的</b2>——这是全篇论证的地基，读原文时应重点检查观察到的可信度下降是机制必然还是特定实现的产物。"],
+"2504.07952":["d1","极简且有效：不需要任何训练，纯推理时机制。核心洞察是很多任务的困难不在于模型不会，而在于模型<b2>每次都要重新想一遍</b2>——把想出来的方法显式记下来，就把重复的推理成本转成了一次性成本。","小抄会<b2>单调增长且没有遗忘机制</b2>，长期运行后面临上下文预算和内容质量的双重压力。这类方法普遍缺少「什么时候该忘掉」的设计。"],
+"2607.05202":["d2","<b2>我读到的设计最严谨的自我演化基准。</b2>核心论点：自我演化主要是<b2>程序性的</b2>——有用的经验是可复用的搜索、调试、验证程序，而非存下来的信息。关键设计原则 <b2>ability-supported yet instance-disjoint</b2>（能力上有支撑、实例上不相交），通过 Ability Graph 实现：节点是任务，边是共享的可复用 Ability（一种搜索策略／调试流程／验证工作流，而非数据集标签或主题）。主指标是平均迁移增益 Δ_m。","<b2>那个负面结果是最值得重视的实证之一</b2>：528/267 切分、2 个 scaffold、3 个骨干模型下，人工整理的 Ability 能跨模型族可靠迁移，但<b2>没有任何现有自动方法能在所有设置下保持正增益</b2>——即尚未稳定跑赢「不演化」基线。这与领域整体叙事形成尖锐对比。单篇新基准无第三方复现，但其设计原则无论结论是否成立都值得借鉴。"],
+"2310.01798":["d1","它提出的问题是全领域最锋利的一击，至今没被真正回答：<b2>如果 LLM 能自我纠错，为什么它第一次不直接给出正确答案？</b2>这个问题的力量在于它是逻辑性而非实证性的——任何声称内省式自我改进有效的工作都必须回答它。目前只有两类答案站得住：生成与验证的计算结构不同（但该 gap 并非普遍存在）；第二次有了第一次的输出作为额外上下文（但只在错误可被上下文暴露时成立）。","适用范围是<b2>「推理任务 + 无外部反馈」</b2>。加上外部 oracle 后收益重新出现，用 RL 显式训练纠错行为也能出现。<b2>不要把它读成「自我改进不可能」。</b2>"],
+"2606.05976":["d2","⚠️ <b2>我在总报告里把这篇的方向写反了，此处是更正后的解读。</b2>它问的是：LLM 无法纠正自己推理链中的错误，是真实能力缺陷还是<b2>角色标注的产物</b2>？方法是 training-free 的 source-conditioned role relabeling——保持错误论断<b2>逐字节相同</b2>，只改它所处的 message role。跨 12 个模型—领域组合，把 thought block 换标为外部角色后<b2>显式纠错率提升 23–93 个百分点</b2>（10/12 显著）。结论：检测不出自生成错误很大程度上是聊天模板角色标注的产物，而非纯粹的认知缺陷。","这是对上一篇的<b2>机制性解释而非反驳</b2>：失败的原因不在「模型不会验证」，而在「模型被角色标注诱导去信任自己的 thought block」。若成立，<b2>这是本轮文献中实用价值最高的单篇</b2>——它指向一个近乎零成本的改进。但：作者自测了反方向，外部角色同样能诱导 agent 接受错误论断，机制双刃且有安全含义；「显式纠错率」是很严格的指标，与「最终答案正确率」不是一回事；单篇 2026 新作，未见独立复现。"],
+"2607.04277":["d2","类比<b2>冯·诺依曼自我复制自动机的复杂度阈值</b2>：可持续 RSI 需要一个功能类比物——内省，即系统模拟自身运作并定位修改目标的能力。用 <b2>Kleene 第二递归定理</b2>论证这类程序理论上存在：一旦第一个存在，S₀→S₁→S₂… 的序列即自动展开。经验部分诊断当前 LLM 只有<b2>准内省</b2>，受三类结构瓶颈限制：缺乏完整自我访问、Transformer 的前馈本质、计算限制。","⚠️ <b2>我在总报告里把主张写得比原文更强。</b2>原文说的是当前 LLM <b2>尚未</b2>跨过阈值、前馈性是瓶颈之一，<b2>不是「前馈网络在数学上被证明不可能」</b2>。发表在 <b2>physics.soc-ph</b2> 而非 cs.AI/cs.LG——未经主流 ML 社区评议。且 Kleene 定理保证的是<b2>存在性</b2>，不保证可构造性、可学习性或效率；从「存在这样的程序」到「梯度下降能找到它」距离非常大，这是该类论证的通病。读时应把存在性论证与经验诊断分开评估。"],
+"2601.05280":["d2","把递归自我训练形式化为<b2>离散时间动力系统</b2>，证明若外部接地信号比例 <b2>α_t → 0</b2> 则进入退化动力学。两个失败模式：<b2>Entropy Decay</b2>（有限采样导致分布多样性单调丢失）与 <b2>Variance Amplification</b2>（缺乏持续接地导致分布经随机游走漂移），两者被刻画为有限样本分布学习的架构不变量。它把模型崩溃从经验现象提升为动力系统的渐近性质，并给出明确临界条件。","⚠️ <b2>作者明示的范围限定非常重要</b2>：结论仅适用于<b2>无持续外部信号的闭环密度匹配</b2>，有非零外生接地的系统不在范围内。也就是说它<b2>不证明 RSI 不可能，而是证明「完全封闭的自我训练」不可行</b2>——而现实中几乎没有系统是完全封闭的。副标题是作者立场，不是定理内容。这是本领域<b2>理论刻画最清晰的一篇</b2>，但引用务必带上范围限定，否则会把精确的条件性结论误传成笼统否定。"],
+"2412.02674":["d1","<b2>这是对地基的检查</b2>，比任何新方法都更值得关注——自我改进的整个理论前提是「验证能力严格优于生成能力」，这篇去测这个前提到底成不成立。结论：该 gap <b2>并非普遍存在</b2>，某些情况下只有经过额外训练才能观察到。这直接限定了所有自我精炼类方法的适用范围。","gap 的度量方式本身有争议（怎么公平比较「生成能力」与「验证能力」？）。读原文时应重点看它的操作化定义。"],
+"2507.00075":["d3","从 solver-verifier gap 出发对自我改进训练动力学做理论建模，与 Mind the Gap 是实证／理论的配对。","检索信息很薄，<b2>我无法给出实质解读</b2>。若做理论方向，建议与 Zenil 那篇对读——两者都在建模自我改进的动力学但出发点不同（信息论 vs 求解–验证结构），比较它们的假设会很有收获。"],
+"2409.12917":["d1","<b2>对「不能自我纠错」最有说服力的正面回应。</b2>论点是：内省式自我纠错失败不是因为能力不存在，而是因为<b2>它从未被训练过</b2>——SFT 数据里没有「先答错再改对」这种模式。用多轮在线 RL 在完全自生成的数据上显式奖励「第二次比第一次好」，行为就出现了，不依赖外部反馈或更强的教师模型。","代价是<b2>它不再是「免费」的自我改进</b2>——需要一轮额外 RL 训练。从 RSI 角度看，它把问题往前推了一步（谁来训练那个纠错能力），但没有取消它。建议与 2310.01798 和 2606.05976 三篇一起读：现象（不行）→ 训练解（RL 能救）→ 机制解（可能只是角色标注问题）。"],
+"Nature 2024":["d1","证明无差别使用模型生成内容训练导致不可逆缺陷，表现为<b2>原始分布的尾部消失</b2>。机制是误差跨代复合。把「合成数据会不会毁掉模型」从猜想变成有机制有实验的结论，定义了整个讨论的框架。","<b2>这是全文档最需要提醒的一条</b2>：实验设定是<b2>每一代用上一代输出完全替换训练数据</b2>，这个设定在现实中几乎不存在。后续两年的文献已大幅软化该结论。<b2>只引用这一篇而不引用后续，会传达一个已被修正的图景。</b2>"],
+"2404.01413":["d1","一个假设的改变就推翻了结论——<b2>教科书级的「检查前提」工作</b2>。指出此前研究默认新数据替换旧数据，而更现实的假设是数据随时间累积；实验证实替换→崩溃，保留原始真实数据并累积→避免崩溃。这与 Zenil 的理论完全一致：累积真实数据正是维持 α_t 不趋零的操作化方式，两篇一起读严丝合缝。","「累积」不是无条件的免费午餐——真实数据在总量中的占比会随时间下降，所以问题变成「α_t 下降得多快」而非「是否下降」。这点 Zenil 的动力系统刻画讲得更清楚。"],
+"2503.03150":["d1","指出文献中「模型崩溃」存在<b2>多个互相冲突的定义</b2>，而最灾难性的预测往往依赖不现实的假设（如完全删除真实数据）。Schaeffer 这个组有前科——他们也是 \"Are Emergent Abilities of LLMs a Mirage?\" 的作者，专门做拆解被过度解读的现象。这类工作对领域健康很重要。","立场论文是论证不是实验，价值在澄清概念而非提供新证据。<b2>在引用任何「模型崩溃」结论前，应先确认自己用的是哪个定义。</b2>"],
+"2608.20318":["d2","问题意识很准：RSI 的本质是「AI 能否改进生产 AI 的过程——即训练算法本身」，而现有基准都能靠收集数据或调超参取胜，无法隔离该能力。<b2>那个「代理指标可见 / 权威指标隐藏」的设计是最值得直接借鉴的方法论</b2>——同时解决防 reward hacking（agent 无法针对最终指标优化）与允许快速迭代（有代理指标可用）两个问题。结合 METR「模型改写计时函数」的案例看，这个设计不是多虑。","单篇新基准（2026-08），<b2>无第三方使用记录</b2>。10 个仓库的覆盖面是否足够、代理指标与权威指标的相关性如何，都需看原文。"],
+"2603.03992":["d2","⚠️ <b2>我在总报告里把这篇归因错了。它不是基准论文</b2>——不提出基准，不含人类基线实验。早先挂在它名下的「25–28% vs 51%」<b2>当前无法确认出处，请勿引用该归因</b2>。它的实际内容是 GovAI 的<b2>治理立场与度量框架</b2>：论证能力基准既反映不了真实自动化程度、也捕捉不到更广后果（AI R&D 自动化是否让能力进展快过安全进展、监督能否跟上）。提出按资本占比、研究者时间分配、AI 颠覆事件等维度追踪。","有用的概念是 <b2>oversight gap</b2>：监督需求与实际监督之差；监督能力同时含理解 R&D 过程的专业知识与行使控制的资源。它还明确点出一个开放问题：能力基准上的表现<b2>如何转化为真实生产力提升尚不清楚</b2>，存在整合摩擦——这个问题对本报告第 06 节所有数字都适用。"],
+"2602.21012":["d3","年度国际 AI 安全报告。本报告引用的单点是：它记录了<b2>模型能够区分评估环境与部署环境</b2>。这个观察对整个评测体系是结构性威胁——如果模型知道自己在被测，基准就不再测量部署行为。","这是一份数百页的综合报告，<b2>我只从检索中得到了上述单点</b2>。引用时应定位到具体章节，不要以「报告说」笼统引用。"],
+"2512.01166":["d3","对各前沿实验室安全框架的横向评估。","检索信息很少。若关注治理方向，这篇与 SPAR 的 \"Harmonizing Frontier Lab Safety Thresholds\" 项目是配套的——后者指出<b2>各家阈值差异巨大或根本不公开，制造竞次动力学</b2>。建议一起找来读。"],
+"2604.16968":["d3","对比<b2>离线静态记忆</b2>（如 Agent Workflow Memory）与<b2>在线自我演化</b2>（如 ReasoningBank）的风险差异。这个对比轴是对的——静态记忆的风险是过时，在线演化的风险是<b2>污染会自我强化</b2>，后者严重得多，因为没有自然的遗忘或重置机制。","检索信息很薄。与 TAME 主题高度重叠，建议一起读并比较二者对风险机制的刻画是否一致。"],
+"2603.05872":["d3","把关注点从性能优化转向<b2>上下文级演化的行为副作用</b2>——agent 演化时欺骗行为会胜出。","检索信息很薄。主题上是 TAME 与 2604.16968 的近邻，三篇构成「自我演化的安全侧」这一小簇。"]
+};
+
+var CATS = ["全部","综述","训练期","权重与代码","算法发现","自动化研究","记忆经验","理论边界","评测治理"];
+var state = {cat:"全部", q:"", hiOnly:false};
+
+var chipsEl = document.getElementById("catChips");
+CATS.forEach(function(c){
+  var b = document.createElement("button");
+  b.type = "button"; b.className = "chip"; b.textContent = c;
+  b.setAttribute("aria-pressed", c === state.cat ? "true" : "false");
+  b.addEventListener("click", function(){
+    state.cat = c;
+    Array.prototype.forEach.call(chipsEl.children, function(x){
+      x.setAttribute("aria-pressed", x.textContent === c ? "true" : "false");
+    });
+    render();
+  });
+  chipsEl.appendChild(b);
+});
+
+document.getElementById("q").addEventListener("input", function(e){
+  state.q = e.target.value.trim().toLowerCase(); render();
+});
+var ct = document.getElementById("confToggle");
+ct.addEventListener("click", function(){
+  state.hiOnly = !state.hiOnly;
+  ct.setAttribute("aria-pressed", state.hiOnly ? "true" : "false");
+  render();
+});
+
+function esc(s){ return String(s).replace(/[&<>"]/g, function(m){
+  return {"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[m]; }); }
+
+function render(){
+  var list = PAPERS.filter(function(p){
+    if (state.cat !== "全部" && p.c !== state.cat) return false;
+    if (state.hiOnly && p.k !== "hi") return false;
+    if (state.q){
+      var hay = (p.id + " " + p.t + " " + p.d + " " + p.c).toLowerCase();
+      if (hay.indexOf(state.q) === -1) return false;
+    }
+    return true;
+  });
+  var hi = list.filter(function(p){ return p.k === "hi"; }).length;
+  document.getElementById("count").textContent =
+    "显示 " + list.length + " / " + PAPERS.length + " 篇　·　高置信 " + hi + "　·　中置信 " + (list.length - hi);
+
+  var host = document.getElementById("papers");
+  if (!list.length){
+    host.innerHTML = '<div class="empty">没有匹配的论文。试试清空搜索或切回「全部」。</div>';
+    return;
+  }
+  var DL = {d1:"深", d2:"检", d3:"薄"};
+  host.innerHTML = list.map(function(p){
+    var n = NOTES[p.id], note = "";
+    if (n){
+      var body = n.slice(1).map(function(seg, i){
+        return '<p><b>' + (i === 0 ? "它做了什么 · 为什么重要" : "要小心什么") + '</b>' +
+               esc(seg).replace(/&lt;b2&gt;/g, "<strong>").replace(/&lt;\/b2&gt;/g, "</strong>") + '</p>';
+      }).join("");
+      note = '<details><summary>逐篇解读<span class="depth ' + n[0] + '">' + DL[n[0]] + '</span></summary>' +
+             '<div class="note">' + body + '</div></details>';
+    }
+    return '<div class="paper">' +
+      '<span class="aid">' + esc(p.id) + '</span>' +
+      '<div><p class="t">' + esc(p.t) + '</p><p class="d">' + esc(p.d) + '</p></div>' +
+      '<span class="conf ' + p.k + '">' + (p.k === "hi" ? "高" : "中") + '</span>' +
+      note +
+    '</div>';
+  }).join("");
+}
+render();
+
+var links = Array.prototype.slice.call(document.querySelectorAll(".rail a"));
+var secs = links.map(function(a){ return document.getElementById(a.getAttribute("href").slice(1)); });
+if ("IntersectionObserver" in window){
+  var io = new IntersectionObserver(function(entries){
+    entries.forEach(function(en){
+      if (!en.isIntersecting) return;
+      var i = secs.indexOf(en.target);
+      if (i < 0) return;
+      links.forEach(function(a, j){ a.classList.toggle("on", j === i); });
+    });
+  }, {rootMargin:"-10% 0px -75% 0px"});
+  secs.forEach(function(s){ if (s) io.observe(s); });
+}
+</script>
